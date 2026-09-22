@@ -239,7 +239,46 @@ body {
 .option-item.selected { border-color: var(--acc-purple); background: var(--acc-purple-dim); color: var(--text); font-weight: 600; }
 .option-item.correct  { border-color: var(--success); background: var(--success-dim); color: var(--success); font-weight: 600; }
 .option-item.wrong    { border-color: var(--danger);  background: var(--danger-dim);  color: var(--danger);  font-weight: 600; }
+.option-item.partial  { border-color: var(--warning); background: rgba(245,158,11,0.12); color: var(--warning); font-weight: 600; }
 .option-item:disabled { cursor: default; }
+
+/* ── Quiz feedback (dopo risposta knowledge) ── */
+.quiz-feedback {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border-left: 3px solid;
+  animation: fadeSlideIn 0.25s ease;
+}
+.quiz-feedback.fb-correct { border-color: var(--success); background: var(--success-dim); }
+.quiz-feedback.fb-partial  { border-color: var(--warning); background: rgba(245,158,11,0.12); }
+.quiz-feedback.fb-wrong    { border-color: var(--danger);  background: var(--danger-dim);  }
+.fb-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.fb-icon   { font-size: 1rem; }
+.fb-label  { font-size: 0.88rem; font-weight: 700; }
+.quiz-feedback.fb-correct .fb-label { color: var(--success); }
+.quiz-feedback.fb-partial  .fb-label { color: var(--warning); }
+.quiz-feedback.fb-wrong    .fb-label { color: var(--danger); }
+.fb-text   { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+
+/* ── Section break card ── */
+.section-break-card {
+  text-align: center;
+  padding: 40px 24px;
+  animation: fadeSlideIn 0.3s ease;
+}
+.sb-icon  { font-size: 2.5rem; margin-bottom: 12px; }
+.sb-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 10px; }
+.sb-desc  { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; max-width: 380px; margin-left: auto; margin-right: auto; }
+.sb-sections { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.sb-sec  { font-size: 0.85rem; padding: 8px 20px; border-radius: var(--radius); background: var(--bg-card2); width: 260px; text-align: left; }
+.sb-done { color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+.sb-next { color: var(--acc-purple); border: 1px solid var(--acc-purple-line); }
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 .step-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 
@@ -253,7 +292,8 @@ body {
 }
 .profile-icon { font-size: 72px; margin-bottom: 16px; }
 .profile-result h2 { font-size: 1.9rem; font-weight: 700; margin-bottom: 12px; }
-.profile-result > p { color: var(--muted); line-height: 1.7; max-width: 420px; margin: 0 auto 36px; font-size: 0.93rem; }
+.profile-result > p { color: var(--muted); line-height: 1.7; max-width: 420px; margin: 0 auto 16px; font-size: 0.93rem; }
+.profile-context-row { font-size: 0.78rem !important; color: var(--border-hi) !important; margin: 0 auto 28px !important; letter-spacing: 0.02em; }
 
 .score-bars { text-align: left; margin-bottom: 36px; display: flex; flex-direction: column; gap: 16px; }
 .score-bar-item { display: flex; align-items: center; gap: 12px; }

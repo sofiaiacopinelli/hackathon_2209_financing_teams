@@ -24,10 +24,11 @@ const app = (() => {
   // ── State ──
   const state = {
     quizStep: 0,
-    answers: new Array(8).fill(null),
+    answers: [],
     knowledgeScore: 0,
     lifestyleScore: 0,
     mortgageContext: {},
+    lifestyleContext: {},
     level: 'principiante',
     income: 0,
     expenses: {},
@@ -37,44 +38,141 @@ const app = (() => {
 
   // ── Quiz data ──
   const QUIZ = [
-    // Conoscenza finanziaria (3 domande, risposta corretta = indice 0)
+    // ── Sezione 1: Conoscenza Finanziaria (5 domande) ──
     {
       type: 'knowledge',
-      category: 'Conoscenza Finanziaria',
-      text: 'Cosa significa TAEG?',
+      category: 'Sezione 1 — Conoscenza Finanziaria',
+      text: 'Cosa indica il TAEG di un prestito?',
       options: [
-        'È il costo totale del credito in percentuale annua: include interessi, commissioni e spese obbligatorie',
-        'È un tipo di conto corrente bancario ad alto rendimento',
-        'È la percentuale mensile che devi risparmiare per andare in pensione'
+        'Il costo totale del credito in percentuale annua: include interessi, commissioni e tutte le spese obbligatorie',
+        'Il tasso di interesse nominale del prestito, senza includere le spese accessorie',
+        'Una percentuale fissa che la banca applica solo sui conti correnti'
       ],
-      correct: 0
+      correct: 0, partial: 1,
+      feedback: {
+        correct: "Perfetto! Il TAEG (Tasso Annuo Effettivo Globale) include tutto il costo reale, non solo gli interessi nominali. Usalo sempre per confrontare due offerte di credito.",
+        partial: "Ci sei quasi! Hai pensato al tasso nominale — ma il TAEG va oltre: aggiunge commissioni, spese di istruttoria e costi obbligatori. Per questo è sempre più alto del tasso nominale.",
+        wrong: "Non è corretto. Il TAEG non riguarda i conti correnti. Misura il costo reale di un prestito includendo interessi e tutte le spese obbligatorie."
+      }
     },
     {
       type: 'knowledge',
-      category: 'Conoscenza Finanziaria',
+      category: 'Sezione 1 — Conoscenza Finanziaria',
       text: "Cosa significa 'inflazione'?",
       options: [
-        "L'aumento generale dei prezzi nel tempo: con la stessa somma, compri meno cose",
-        "L'aumento automatico del tuo stipendio legato all'anzianità lavorativa",
-        "Una riduzione delle tasse applicata dallo Stato ogni anno"
+        "L'aumento generale dei prezzi nel tempo: con la stessa somma di denaro, compri meno cose",
+        "Un aumento temporaneo dei prezzi in un settore specifico, che di solito si riassorbe",
+        "La crescita automatica dello stipendio in base all'anzianità di servizio"
       ],
-      correct: 0
+      correct: 0, partial: 1,
+      feedback: {
+        correct: "Esatto! L'inflazione corrode il potere d'acquisto: 1.000€ oggi con inflazione al 2% valgono circa 820€ tra 10 anni se li tieni fermi.",
+        partial: "In parte giusto — ma l'inflazione strutturale non è temporanea né settoriale: persiste nel tempo e corrode il potere d'acquisto di tutti i risparmi, ogni anno.",
+        wrong: "Non è corretto. L'inflazione non riguarda lo stipendio: è l'aumento generale dei prezzi. Con il 2% annuo, ogni anno con gli stessi soldi compri il 2% in meno."
+      }
     },
     {
       type: 'knowledge',
-      category: 'Conoscenza Finanziaria',
+      category: 'Sezione 1 — Conoscenza Finanziaria',
       text: 'Hai 1.000€ in un conto al 5% di interesse annuo composto. Dopo 2 anni avrai circa:',
       options: [
-        '1.102,50€',
-        '1.100€ esatti',
-        '1.050€'
+        '1.102,50€ — il secondo anno il 5% si applica su 1.050€, non su 1.000€',
+        '1.100€ esatti — 50€ di interesse fisso per ogni anno',
+        '1.050€ — il 5% applicato una sola volta'
       ],
-      correct: 0
+      correct: 0, partial: 1,
+      feedback: {
+        correct: "Esatto! Primo anno: 1.000€ × 5% = 50€ → 1.050€. Secondo anno: 1.050€ × 5% = 52,50€ → 1.102,50€. Gli interessi del primo anno generano altri interessi: è il potere dell'interesse composto!",
+        partial: "Quasi! Hai calcolato l'interesse semplice (50€ × 2 = 100€). Con il composto, al secondo anno il 5% si applica su 1.050€ già accumulati, non sul capitale iniziale. Risultato: 1.102,50€.",
+        wrong: "Non è corretto. 1.050€ sarebbe il risultato dopo solo 1 anno. Con l'interesse composto, al secondo anno si applica il 5% su 1.050€: risultato 1.102,50€."
+      }
     },
-    // Stile di vita (3 domande, nessuna risposta corretta — scoring su punteggio)
+    {
+      type: 'knowledge',
+      category: 'Sezione 1 — Conoscenza Finanziaria',
+      text: "Cos'è il 'fondo di emergenza' in finanza personale?",
+      options: [
+        'Una riserva di 3-6 mesi di spese, tenuta in un conto liquidissimo e facilmente accessibile',
+        'Qualsiasi somma risparmiata messa da parte, indipendentemente da dove è investita',
+        "Un'assicurazione vita obbligatoria richiesta dalla banca per ottenere un mutuo"
+      ],
+      correct: 0, partial: 1,
+      feedback: {
+        correct: "Perfetto! Il fondo di emergenza è la base della sicurezza finanziaria: 3-6 mesi di spese, immediatamente accessibili (conto corrente o deposito), separati dai risparmi per investimento.",
+        partial: "Il concetto è giusto, ma manca la parte cruciale: il fondo di emergenza deve essere in un conto liquidissimo, non investito. Se lo investi, potresti non poterlo usare nel momento del bisogno.",
+        wrong: "Non è corretto. Il fondo di emergenza non è un'assicurazione: è una riserva liquida di 3-6 mesi di spese che gestisci tu, da tenere sempre accessibile per imprevisti."
+      }
+    },
+    {
+      type: 'knowledge',
+      category: 'Sezione 1 — Conoscenza Finanziaria',
+      text: "Cosa significa 'diversificare' un portafoglio di investimenti?",
+      options: [
+        'Distribuire il capitale su più asset diversi (azioni, obbligazioni, mercati geografici) per ridurre il rischio complessivo',
+        'Investire in molte azioni diverse tutte appartenenti allo stesso mercato azionario nazionale',
+        'Concentrare tutto il capitale sul singolo investimento con il rendimento atteso più elevato'
+      ],
+      correct: 0, partial: 1,
+      feedback: {
+        correct: "Perfetto! La diversificazione riduce il rischio perché asset diversi non si muovono allo stesso modo. Se un settore scende, un altro può compensare. È il classico 'non mettere tutte le uova nello stesso paniere'.",
+        partial: "In parte giusto — ma investire in più azioni dello stesso mercato è diversificazione parziale. Quella vera combina classi di asset diverse (azioni, obbligazioni, liquidità) e mercati geografici differenti.",
+        wrong: "Non è corretto — è l'opposto. Concentrare tutto sul miglior investimento massimizza il rischio: se quell'asset crolla, perdi tutto. La diversificazione serve proprio a proteggersi da questo scenario."
+      }
+    },
+    // ── Transizione tra sezioni ──
+    {
+      type: 'section_break',
+      icon: '🎯',
+      title: 'Sezione 1 completata!',
+      description: "Hai risposto alle domande sulla conoscenza finanziaria. Ora passiamo a capire il tuo contesto di vita e le tue abitudini con il denaro.",
+      nextLabel: 'Vai alla Sezione 2 →'
+    },
+    // ── Sezione 2: Stile di vita — Contesto ──
+    {
+      type: 'lifestyle_context',
+      category: 'Sezione 2 — Il tuo contesto',
+      text: 'In che tipo di contesto abiti?',
+      options: [
+        'Grande città (Milano, Roma, Torino, Napoli…)',
+        'Città media o capoluogo di provincia',
+        'Piccolo comune o area rurale'
+      ]
+    },
+    {
+      type: 'lifestyle_context',
+      category: 'Sezione 2 — Il tuo contesto',
+      text: 'Qual è la tua situazione familiare?',
+      options: [
+        'Vivo da solo/a',
+        'Con partner, senza figli',
+        'Con partner e figli',
+        'Con genitori o coinquilini'
+      ]
+    },
+    {
+      type: 'lifestyle_context',
+      category: 'Sezione 2 — Il tuo contesto',
+      text: 'Hai figli a carico?',
+      options: [
+        'No',
+        'Sì, uno',
+        'Sì, due o più'
+      ]
+    },
+    {
+      type: 'lifestyle_context',
+      category: 'Sezione 2 — Il tuo contesto',
+      text: 'Quante auto ha il tuo nucleo familiare?',
+      options: [
+        'Nessuna — uso trasporto pubblico o condiviso',
+        'Una',
+        'Due o più'
+      ]
+    },
+    // ── Sezione 2: Stile di vita — Abitudini ──
     {
       type: 'lifestyle',
-      category: 'Il tuo stile di vita',
+      category: 'Sezione 2 — Le tue abitudini',
       text: 'Come gestisci i tuoi risparmi ogni mese?',
       options: [
         'Non riesco a risparmiare, arrivo quasi sempre a zero',
@@ -85,7 +183,7 @@ const app = (() => {
     },
     {
       type: 'lifestyle',
-      category: 'Il tuo stile di vita',
+      category: 'Sezione 2 — Le tue abitudini',
       text: 'Hai debiti o prestiti attivi (escluso mutuo casa)?',
       options: [
         'Sì, più di uno (auto, personale, carta rateale…)',
@@ -96,7 +194,7 @@ const app = (() => {
     },
     {
       type: 'lifestyle',
-      category: 'Il tuo stile di vita',
+      category: 'Sezione 2 — Le tue abitudini',
       text: 'Con quale frequenza monitori le tue spese?',
       options: [
         'Mai, preferisco non pensarci troppo',
@@ -105,7 +203,7 @@ const app = (() => {
       ],
       scores: [0, 1, 2]
     },
-    // Contesto mutuo (2 domande, non scorinate)
+    // ── Contesto mutuo ──
     {
       type: 'mortgage_context',
       category: 'Il tuo obiettivo',
@@ -150,21 +248,21 @@ const app = (() => {
       icon: '🌱',
       title: 'Esploratore Finanziario',
       desc: "Stai iniziando il tuo percorso — e c'è molto da scoprire! Con le giuste informazioni e qualche piccola abitudine puoi migliorare tantissimo la tua situazione economica.",
-      range: [0, 4]
+      range: [0, 5]
     },
     {
       id: 'intermedio',
       icon: '📊',
       title: 'Risparmiatore Consapevole',
       desc: "Hai già buone basi e prendi decisioni ragionate. Ora puoi concentrarti sull'ottimizzare le tue scelte e far lavorare meglio i tuoi risparmi.",
-      range: [5, 7]
+      range: [6, 9]
     },
     {
       id: 'esperto',
       icon: '🏆',
       title: 'Investitore Strategico',
       desc: "Hai una solida comprensione delle finanze personali. Sei in posizione ottima per costruire ricchezza nel lungo periodo con strategie di investimento consapevoli.",
-      range: [8, 9]
+      range: [10, 11]
     }
   ];
 
@@ -297,7 +395,7 @@ const app = (() => {
   }
 
   // ── Navigazione tra step ──
-  const FLOW_ORDER = ['quiz', 'profile', 'expenses', 'simulation', 'mortgage'];
+  const FLOW_ORDER = ['quiz', 'expenses', 'profile', 'simulation', 'mortgage'];
 
   function showStep(id) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
@@ -347,21 +445,66 @@ const app = (() => {
   // ── Quiz ──
   function startQuiz() {
     state.quizStep = 0;
-    state.answers = new Array(6).fill(null);
+    state.answers = new Array(QUIZ.length).fill(null);
     showStep('quiz');
     renderQuestion();
   }
 
   function renderQuestion() {
     const q = QUIZ[state.quizStep];
-    document.getElementById('quizBadge').textContent = `Domanda ${state.quizStep + 1} di ${QUIZ.length}`;
-    document.getElementById('questionTitle').textContent = q.category;
-    document.getElementById('questionText').textContent = q.text;
+    const badge   = document.getElementById('quizBadge');
+    const titleEl = document.getElementById('questionTitle');
+    const textEl  = document.getElementById('questionText');
+    const listEl  = document.getElementById('optionsList');
+    const nextBtn = document.getElementById('btnNextQ');
+    const prevBtn = document.getElementById('btnPrevQ');
 
-    const list = document.getElementById('optionsList');
-    list.innerHTML = '';
+    // Remove stale feedback and section-break card
+    const oldFb    = document.getElementById('quizFeedback');
+    const oldBreak = document.getElementById('sectionBreakContent');
+    if (oldFb)    oldFb.remove();
+    if (oldBreak) oldBreak.remove();
+
+    if (q.type === 'section_break') {
+      badge.style.display   = 'none';
+      titleEl.style.display = 'none';
+      textEl.style.display  = 'none';
+      listEl.style.display  = 'none';
+
+      const card = document.createElement('div');
+      card.id = 'sectionBreakContent';
+      card.className = 'section-break-card';
+      card.innerHTML = `
+        <div class="sb-icon">${q.icon}</div>
+        <h3 class="sb-title">${q.title}</h3>
+        <p class="sb-desc">${q.description}</p>
+        <div class="sb-sections">
+          <div class="sb-sec sb-done">✅ Conoscenza finanziaria — completata</div>
+          <div class="sb-sec sb-next">→ Stile di vita — prossima</div>
+        </div>`;
+      document.querySelector('#step-quiz .question-container').appendChild(card);
+
+      prevBtn.textContent = '← Indietro';
+      nextBtn.textContent = q.nextLabel;
+      nextBtn.disabled    = false;
+      return;
+    }
+
+    // Restore visibility for normal questions
+    badge.style.display   = '';
+    titleEl.style.display = '';
+    textEl.style.display  = '';
+    listEl.style.display  = '';
+
+    // Badge: count only real questions (no section_break)
+    const totalQ   = QUIZ.filter(x => x.type !== 'section_break').length;
+    const currentQ = QUIZ.slice(0, state.quizStep + 1).filter(x => x.type !== 'section_break').length;
+    badge.textContent   = `Domanda ${currentQ} di ${totalQ}`;
+    titleEl.textContent = q.category;
+    textEl.textContent  = q.text;
 
     const saved = state.answers[state.quizStep];
+    listEl.innerHTML = '';
 
     q.options.forEach((opt, i) => {
       const btn = document.createElement('button');
@@ -371,22 +514,43 @@ const app = (() => {
       if (saved !== null) {
         btn.disabled = true;
         if (q.type === 'knowledge') {
-          if (i === q.correct) btn.classList.add('correct');
-          else if (i === saved) btn.classList.add('wrong');
+          if (i === q.correct)                           btn.classList.add('correct');
+          else if (i === saved && i === q.partial)       btn.classList.add('partial');
+          else if (i === saved)                          btn.classList.add('wrong');
         } else {
           if (i === saved) btn.classList.add('selected');
         }
       } else {
         btn.onclick = () => selectAnswer(i);
       }
-      list.appendChild(btn);
+      listEl.appendChild(btn);
     });
 
-    document.getElementById('btnNextQ').disabled = saved === null;
-    document.getElementById('btnNextQ').textContent =
-      state.quizStep === QUIZ.length - 1 ? 'Vedi il mio profilo →' : 'Avanti →';
-    const prevBtn = document.getElementById('btnPrevQ');
+    if (saved !== null && q.type === 'knowledge') showKnowledgeFeedback(q, saved);
+
+    nextBtn.disabled    = saved === null;
+    nextBtn.textContent = state.quizStep === QUIZ.length - 1 ? 'Vedi il mio profilo →' : 'Avanti →';
     prevBtn.textContent = state.quizStep === 0 ? '← Home' : '← Indietro';
+  }
+
+  function showKnowledgeFeedback(q, selectedIdx) {
+    const isCorrect = selectedIdx === q.correct;
+    const isPartial = selectedIdx === q.partial;
+    const type      = isCorrect ? 'correct' : isPartial ? 'partial' : 'wrong';
+    const icons     = { correct: '✅', partial: '🟡', wrong: '❌' };
+    const labels    = { correct: 'Esatto!', partial: 'Quasi — ma non del tutto', wrong: 'Non è corretto' };
+
+    const fb = document.createElement('div');
+    fb.id = 'quizFeedback';
+    fb.className = `quiz-feedback fb-${type}`;
+    fb.innerHTML = `
+      <div class="fb-header">
+        <span class="fb-icon">${icons[type]}</span>
+        <strong class="fb-label">${labels[type]}</strong>
+      </div>
+      <p class="fb-text">${q.feedback[type]}</p>`;
+
+    document.getElementById('optionsList').after(fb);
   }
 
   function selectAnswer(idx) {
@@ -396,12 +560,15 @@ const app = (() => {
     document.querySelectorAll('.option-item').forEach((btn, i) => {
       btn.disabled = true;
       if (q.type === 'knowledge') {
-        if (i === q.correct) btn.classList.add('correct');
-        else if (i === idx) btn.classList.add('wrong');
+        if (i === q.correct)                     btn.classList.add('correct');
+        else if (i === idx && i === q.partial)   btn.classList.add('partial');
+        else if (i === idx)                      btn.classList.add('wrong');
       } else {
         if (i === idx) btn.classList.add('selected');
       }
     });
+
+    if (q.type === 'knowledge') showKnowledgeFeedback(q, idx);
 
     document.getElementById('btnNextQ').disabled = false;
   }
@@ -411,10 +578,14 @@ const app = (() => {
       state.quizStep++;
       renderQuestion();
     } else {
-      computeScores();
-      renderProfile();
-      showStep('profile');
+      goToExpenses();
     }
+  }
+
+  function goToProfile() {
+    computeScores();
+    renderProfile();
+    showStep('profile');
   }
 
   function prevQuestion() {
@@ -436,12 +607,15 @@ const app = (() => {
     state.knowledgeScore = 0;
     state.lifestyleScore = 0;
     state.mortgageContext = {};
+    state.lifestyleContext = {};
     QUIZ.forEach((q, i) => {
+      if (q.type === 'section_break') return;
       const ans = state.answers[i];
       if (ans === null) return;
       if (q.type === 'knowledge' && ans === q.correct) state.knowledgeScore++;
       if (q.type === 'lifestyle') state.lifestyleScore += q.scores[ans];
       if (q.type === 'mortgage_context') state.mortgageContext[i] = ans;
+      if (q.type === 'lifestyle_context') state.lifestyleContext[i] = ans;
     });
     state.level = getProfile().id;
   }
@@ -453,7 +627,7 @@ const app = (() => {
     document.getElementById('profileTitle').textContent = p.title;
     document.getElementById('profileDesc').textContent = p.desc;
 
-    const kPct = (state.knowledgeScore / 3 * 100).toFixed(0);
+    const kPct = (state.knowledgeScore / 5 * 100).toFixed(0);
     const lPct = (state.lifestyleScore / 6 * 100).toFixed(0);
 
     setTimeout(() => {
@@ -461,10 +635,25 @@ const app = (() => {
       document.getElementById('lifestyleBar').style.width = lPct + '%';
     }, 120);
 
-    const kLabels = ['In crescita', 'Discreto', 'Buono', 'Ottimo'];
+    const kLabels = ['In crescita', 'Base', 'Discreto', 'Buono', 'Ottimo', 'Eccellente'];
     const lLabels = ['Da migliorare', 'Base', 'Discreto', 'Buono', 'Ottimo', 'Eccellente', 'Top'];
     document.getElementById('knowledgeLabel').textContent = kLabels[state.knowledgeScore] || '';
     document.getElementById('lifestyleLabel').textContent = lLabels[state.lifestyleScore] || '';
+
+    // Riepilogo contesto (lifestyle_context)
+    const ctxItems = QUIZ
+      .map((q, i) => q.type === 'lifestyle_context' && state.answers[i] !== null
+        ? q.options[state.answers[i]] : null)
+      .filter(Boolean);
+    const ctxEl = document.getElementById('profileContextRow');
+    if (ctxEl) {
+      if (ctxItems.length > 0) {
+        ctxEl.textContent = ctxItems.join('  ·  ');
+        ctxEl.style.display = 'block';
+      } else {
+        ctxEl.style.display = 'none';
+      }
+    }
   }
 
   // ── Spese ──

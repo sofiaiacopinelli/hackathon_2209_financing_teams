@@ -23,14 +23,14 @@
         <span class="sf-label">Quiz</span>
       </div>
       <div class="sf-arrow">→</div>
-      <div class="sf-item" id="sf-profile">
+      <div class="sf-item" id="sf-expenses">
         <span class="sf-num">02</span>
-        <span class="sf-label">Profilo</span>
+        <span class="sf-label">Spese</span>
       </div>
       <div class="sf-arrow">→</div>
-      <div class="sf-item" id="sf-expenses">
+      <div class="sf-item" id="sf-profile">
         <span class="sf-num">03</span>
-        <span class="sf-label">Spese</span>
+        <span class="sf-label">Profilo</span>
       </div>
       <div class="sf-arrow">→</div>
       <div class="sf-item" id="sf-simulation">
@@ -86,6 +86,7 @@
         <div class="profile-icon" id="profileIcon"></div>
         <h2 id="profileTitle"></h2>
         <p id="profileDesc"></p>
+        <p class="profile-context-row" id="profileContextRow" style="display:none"></p>
         <div class="score-bars">
           <div class="score-bar-item">
             <span class="sb-label">Conoscenza finanziaria</span>
@@ -99,8 +100,8 @@
           </div>
         </div>
         <div class="step-nav" style="margin-top:32px">
-          <button class="btn btn-ghost" onclick="app.backToQuiz()">← Rifai il quiz</button>
-          <button class="btn btn-primary btn-large" onclick="app.goToExpenses()">Analizza le mie spese →</button>
+          <button class="btn btn-ghost" onclick="app.showStep('expenses')">← Torna alle spese</button>
+          <button class="btn btn-primary btn-large" onclick="app.goToSimulation()">Simula il mio futuro →</button>
         </div>
       </div>
     </div>
@@ -143,8 +144,8 @@
       </div>
 
       <div class="step-nav">
-        <button class="btn btn-ghost" onclick="app.showStep('profile')">← Indietro</button>
-        <button class="btn btn-primary" onclick="app.goToSimulation()">Simula il mio futuro →</button>
+        <button class="btn btn-ghost" onclick="app.backToQuiz()">← Torna al quiz</button>
+        <button class="btn btn-primary" onclick="app.goToProfile()">Scopri il mio profilo →</button>
       </div>
     </div>
 
@@ -198,7 +199,7 @@
       </div>
 
       <div class="step-nav" style="margin-top:32px">
-        <button class="btn btn-ghost" onclick="app.showStep('expenses')">← Torna alle spese</button>
+        <button class="btn btn-ghost" onclick="app.showStep('profile')">← Torna al profilo</button>
         <button class="btn btn-primary" onclick="app.goToMortgage()">Calcola mutuo →</button>
       </div>
     </div>
