@@ -115,22 +115,20 @@
     .mock-atext strong { color:var(--t); display:block; font-size:10px; }
 
     /* ── SLIDE 5 — ARCHITETTURA ── */
-    .arch { display:flex; gap:0; align-items:stretch; }
-    .arch-layer { flex:1; background:var(--c1); border:1px solid var(--b); padding:20px 16px; text-align:center; position:relative; }
-    .arch-layer h3 { font-size:13px; font-weight:700; margin-bottom:8px; color:var(--t); }
-    .arch-layer .arch-sub { font-size:11px; color:var(--mu); line-height:1.6; }
-    .arch-layer .arch-icon { font-size:28px; margin-bottom:10px; }
-    .arch-arrow { display:flex; align-items:center; padding:0 4px; color:var(--p); font-size:18px; flex-shrink:0; }
-    .arch-layer.highlight { border-color:var(--p); background:rgba(161,0,255,.04); }
-    .arch-layer.highlight h3 { color:var(--pm); }
+    .arch { display:flex; gap:20px; align-items:stretch; }
+    .arch-layer { flex:1; background:var(--c1); border:1px solid var(--b); border-top:3px solid var(--b); padding:28px 24px; }
+    .arch-layer.highlight { border-top-color:var(--p); }
+    .arch-num { font-size:42px; font-weight:700; color:var(--p); line-height:1; margin-bottom:14px; opacity:.5; }
+    .arch-layer h3 { font-size:18px; font-weight:700; margin-bottom:12px; color:var(--t); }
+    .arch-layer p { font-size:14px; color:var(--mu); line-height:1.75; margin-bottom:14px; }
+    .arch-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:16px; }
+    .arch-tag { padding:3px 10px; border:1px solid var(--bh); border-radius:20px; font-size:11px; color:var(--mu); }
+    .arch-tag.hi { border-color:var(--p); color:var(--pm); }
+    .arch-arrow { display:flex; align-items:center; color:var(--p); font-size:22px; flex-shrink:0; padding-bottom:20px; }
 
     .tech-row { display:flex; gap:10px; margin-top:24px; flex-wrap:wrap; }
     .tbadge { padding:5px 14px; border:1px solid var(--p); border-radius:20px; font-size:11px; color:var(--pm); }
     .tbadge.muted { border-color:var(--bh); color:var(--mu); }
-
-    .arch-detail { margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .arch-note { background:var(--c2); border:1px solid var(--b); padding:12px 14px; font-size:11px; color:var(--mu); line-height:1.5; }
-    .arch-note strong { color:var(--t); display:block; margin-bottom:4px; font-size:12px; }
 
     /* ── SLIDE 6 — IMPATTO ── */
     .kpi-row { display:flex; gap:16px; margin-bottom:24px; }
@@ -297,27 +295,42 @@
             <div class="mmv" style="color:var(--w)">€ 38.200</div>
           </div>
         </div>
-        <div class="mock-chart">
-          <!-- risparmio puro -->
-          <div style="flex:1;display:flex;align-items:flex-end;gap:2px;width:100%">
-            <div class="chart-line" style="height:15%;background:#94A3B8;opacity:.6"></div>
-            <div class="chart-line" style="height:22%;background:#94A3B8;opacity:.6"></div>
-            <div class="chart-line" style="height:30%;background:#94A3B8;opacity:.6"></div>
-            <div class="chart-line" style="height:38%;background:#94A3B8;opacity:.6"></div>
-            <div class="chart-line" style="height:47%;background:#94A3B8;opacity:.6"></div>
-            <div class="chart-line" style="height:55%;background:#94A3B8;opacity:.6"></div>
-            <div class="chart-line" style="height:20%;background:#F59E0B"></div>
-            <div class="chart-line" style="height:31%;background:#F59E0B"></div>
-            <div class="chart-line" style="height:45%;background:#F59E0B"></div>
-            <div class="chart-line" style="height:62%;background:#F59E0B"></div>
-            <div class="chart-line" style="height:78%;background:#F59E0B"></div>
-            <div class="chart-line" style="height:90%;background:#F59E0B"></div>
-            <div class="chart-line" style="height:24%;background:#06B6D4"></div>
-            <div class="chart-line" style="height:38%;background:#06B6D4"></div>
-            <div class="chart-line" style="height:56%;background:#06B6D4"></div>
-            <div class="chart-line" style="height:75%;background:#06B6D4"></div>
-            <div class="chart-line" style="height:92%;background:#06B6D4"></div>
-            <div class="chart-line" style="height:100%;background:#06B6D4"></div>
+        <!-- Grouped bar chart: 5 gruppi (anno 4,8,12,16,20), 3 barre per gruppo -->
+        <div style="background:var(--c2);border:1px solid var(--b);height:80px;display:flex;align-items:flex-end;padding:0 6px 0;gap:6px;overflow:hidden">
+          <!-- Anno 4 -->
+          <div style="display:flex;align-items:flex-end;gap:2px">
+            <div style="width:7px;height:10px;background:#94A3B8;opacity:.7;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:13px;background:#F59E0B;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:15px;background:#06B6D4;border-radius:1px 1px 0 0"></div>
+          </div>
+          <!-- Anno 8 -->
+          <div style="display:flex;align-items:flex-end;gap:2px">
+            <div style="width:7px;height:20px;background:#94A3B8;opacity:.7;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:28px;background:#F59E0B;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:32px;background:#06B6D4;border-radius:1px 1px 0 0"></div>
+          </div>
+          <!-- Anno 12 -->
+          <div style="display:flex;align-items:flex-end;gap:2px">
+            <div style="width:7px;height:30px;background:#94A3B8;opacity:.7;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:44px;background:#F59E0B;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:50px;background:#06B6D4;border-radius:1px 1px 0 0"></div>
+          </div>
+          <!-- Anno 16 -->
+          <div style="display:flex;align-items:flex-end;gap:2px">
+            <div style="width:7px;height:40px;background:#94A3B8;opacity:.7;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:56px;background:#F59E0B;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:64px;background:#06B6D4;border-radius:1px 1px 0 0"></div>
+          </div>
+          <!-- Anno 20 -->
+          <div style="display:flex;align-items:flex-end;gap:2px">
+            <div style="width:7px;height:50px;background:#94A3B8;opacity:.7;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:64px;background:#F59E0B;border-radius:1px 1px 0 0"></div>
+            <div style="width:7px;height:76px;background:#06B6D4;border-radius:1px 1px 0 0"></div>
+          </div>
+          <!-- label anni -->
+          <div style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:2px;gap:0;margin-left:4px">
+            <div style="font-size:8px;color:var(--mu)">Anno 4</div>
+            <div style="font-size:8px;color:var(--mu);margin-top:2px">→ 20</div>
           </div>
         </div>
         <div class="mock-legend">
@@ -360,38 +373,43 @@
 <div class="slide" id="s5">
   <div class="logo">Accenture<span>.</span></div>
   <div class="slabel">Architettura</div>
-  <h2 class="stitle" style="margin-bottom:18px">Come funziona sotto il cofano</h2>
+  <h2 class="stitle" style="margin-bottom:24px">Come funziona</h2>
   <div class="arch">
     <div class="arch-layer">
-      <div class="arch-icon">🖥️</div>
-      <h3>Frontend</h3>
-      <div class="arch-sub">HTML + CSS<br>ES Modules (no bundler)<br><br>quiz.js · expenses.js<br>simulation.js · mortgage.js<br><br>Chart.js per i grafici</div>
+      <div class="arch-num">01</div>
+      <h3>L'app nel browser</h3>
+      <p>L'utente usa quiz, simulatori e advisor direttamente nel browser. Niente da installare, niente da scaricare — funziona su qualsiasi computer.</p>
+      <p>Un server Node.js locale serve sia la pagina web che le API sulla stessa porta. Un solo comando per avviare tutto: <strong style="color:var(--pm)">npm start</strong>.</p>
+      <div class="arch-tags">
+        <span class="arch-tag hi">HTML + CSS</span>
+        <span class="arch-tag hi">ES Modules</span>
+        <span class="arch-tag">Chart.js</span>
+      </div>
     </div>
     <div class="arch-arrow">→</div>
     <div class="arch-layer highlight">
-      <div class="arch-icon">⚡</div>
-      <h3>Express Server</h3>
-      <div class="arch-sub">Node.js · porta 3000<br>Serve frontend + API<br><br>6 route POST:<br>/analyze · /mortgage-offer<br>/suggest-expenses · /tip-detail<br>/quiz-feedback · /mortgage-coach</div>
-    </div>
-    <div class="arch-arrow">→</div>
-    <div class="arch-layer highlight">
-      <div class="arch-icon">🔧</div>
-      <h3>Skills + Agenti</h3>
-      <div class="arch-sub">Skills (funzioni pure):<br>evaluate_quiz<br>analyze_expenses<br>propose_mortgage<br><br>6 agenti specializzati<br>buildPrompt() → template .md<br>con {{PLACEHOLDER}}</div>
+      <div class="arch-num">02</div>
+      <h3>Il server analizza prima di chiedere all'AI</h3>
+      <p>Prima di chiamare Claude, il server esegue le <strong style="color:var(--t)">"skill"</strong>: funzioni pure che calcolano la situazione reale dell'utente in modo deterministico.</p>
+      <p>Claude non riceve "l'utente guadagna €2.000" — riceve "savings rate 18%, anomalia spese ristorante +€120 vs media, gap mensile €340 per soglia mutuo". Risposte più precise.</p>
+      <div class="arch-tags">
+        <span class="arch-tag hi">6 agenti specializzati</span>
+        <span class="arch-tag hi">skill pure</span>
+        <span class="arch-tag">Node.js · Express</span>
+      </div>
     </div>
     <div class="arch-arrow">→</div>
     <div class="arch-layer">
-      <div class="arch-icon">🤖</div>
-      <h3>Claude CLI</h3>
-      <div class="arch-sub">claude --print<br>subprocess spawn<br><br>Nessuna API key<br>Nessun costo extra<br>Risposta come stringa<br>→ JSON al browser</div>
+      <div class="arch-num">03</div>
+      <h3>Claude risponde in secondi</h3>
+      <p>Il server chiama <strong style="color:var(--pm)">claude --print</strong> come un normale processo del sistema operativo. Nessuna API key aggiuntiva, nessun costo extra.</p>
+      <p>Chiunque abbia Claude Code installato può far girare l'app — la stessa autenticazione già usata per sviluppare.</p>
+      <div class="arch-tags">
+        <span class="arch-tag hi">Claude CLI</span>
+        <span class="arch-tag">zero API key</span>
+        <span class="arch-tag">zero cloud</span>
+      </div>
     </div>
-  </div>
-  <div class="tech-row">
-    <span class="tbadge">HTML · CSS · ES Modules</span>
-    <span class="tbadge">Node.js · Express</span>
-    <span class="tbadge">Claude CLI (Anthropic)</span>
-    <span class="tbadge">Chart.js</span>
-    <span class="tbadge muted">zero API key · zero DB · zero build step</span>
   </div>
   <div class="snum">05 / 06</div>
 </div>
