@@ -20,15 +20,46 @@ export function goToSimulation() {
 /**
  * Renderizza l'intera simulazione: metriche, grafico Chart.js, legenda, tips e azioni.
  */
+// Scenario realistico: 5% rendimento, 83% contribuzione effettiva (10/12 mesi),
+// con shock agli anni 5, 10, 15 che simulano emergenze (spese impreviste, periodi difficili)
+function realisticScenarioSeries(pmt, years, investRate = 0.05) {
+  const SHOCKS = { 5: 4, 10: 3, 15: 4 }; // mesi di risparmio persi per emergenza
+  const effectivePmt = pmt * (10 / 12);   // 2 mesi/anno "persi" a imprevisti piccoli
+  const r = investRate / 12;
+  const series = [0];
+  let balance = 0;
+  for (let y = 1; y <= years; y++) {
+    for (let m = 0; m < 12; m++) balance = balance * (1 + r) + effectivePmt;
+    if (SHOCKS[y]) balance = Math.max(0, balance - pmt * SHOCKS[y]);
+    series.push(Math.round(balance));
+  }
+  return series;
+}
+
+// Scenario crescita stipendio: risparmio aumenta del growthRate% ogni anno, investito al 5%
+function progressiveScenarioSeries(pmt, years, investRate = 0.05, growthRate = 0.03) {
+  const r = investRate / 12;
+  const series = [0];
+  let balance = 0;
+  for (let y = 1; y <= years; y++) {
+    const yearPmt = pmt * Math.pow(1 + growthRate, y - 1);
+    for (let m = 0; m < 12; m++) balance = balance * (1 + r) + yearPmt;
+    series.push(Math.round(balance));
+  }
+  return series;
+}
+
 export function renderSimulation() {
   const pmt = Math.max(0, monthlySavings());
   const years = 20;
   const labels = Array.from({ length: years + 1 }, (_, i) => i === 0 ? 'Oggi' : `Anno ${i}`);
 
-  const noInterest = labels.map((_, i) => pmt * i * 12);
-  const low        = labels.map((_, i) => compoundGrowth(pmt, i, 0.02));
-  const mid        = labels.map((_, i) => compoundGrowth(pmt, i, 0.05));
-  const realPower  = labels.map((_, i) => (pmt * i * 12) / Math.pow(1.02, i));
+  const noInterest  = labels.map((_, i) => pmt * i * 12);
+  const low         = labels.map((_, i) => compoundGrowth(pmt, i, 0.02));
+  const mid         = labels.map((_, i) => compoundGrowth(pmt, i, 0.05));
+  const realPower   = labels.map((_, i) => (pmt * i * 12) / Math.pow(1.02, i));
+  const realistic   = realisticScenarioSeries(pmt, years, 0.05);
+  const progressive = progressiveScenarioSeries(pmt, years, 0.05, 0.03);
 
   // Metriche riepilogative
   const savings = monthlySavings();
@@ -39,14 +70,14 @@ export function renderSimulation() {
       <div class="metric-sub">${savings >= 0 ? 'ottimo punto di partenza' : 'da riequilibrare'}</div>
     </div>
     <div class="metric-card">
-      <div class="metric-label">In 10 anni — solo risparmio</div>
-      <div class="metric-value">${fmt(Math.max(0, noInterest[10]))}</div>
-      <div class="metric-sub">senza rendimenti</div>
+      <div class="metric-label">In 10 anni — ottimistico (5%)</div>
+      <div class="metric-value" style="color:var(--success)">${fmt(Math.max(0, mid[10]))}</div>
+      <div class="metric-sub">${mid[10] > noInterest[10] ? '+' + fmt(mid[10] - noInterest[10]) + ' vs puro' : ''}</div>
     </div>
     <div class="metric-card">
-      <div class="metric-label">In 10 anni — investendo al 5%</div>
-      <div class="metric-value" style="color:var(--success)">${fmt(Math.max(0, mid[10]))}</div>
-      <div class="metric-sub">${mid[10] > noInterest[10] ? '+' + fmt(mid[10] - noInterest[10]) + ' extra' : ''}</div>
+      <div class="metric-label">In 10 anni — realistico</div>
+      <div class="metric-value" style="color:var(--warning)">${fmt(Math.max(0, realistic[10]))}</div>
+      <div class="metric-sub">con imprevisti inclusi</div>
     </div>`;
 
   // Grafico Chart.js (distrugge il precedente se esiste)
@@ -57,10 +88,12 @@ export function renderSimulation() {
     data: {
       labels,
       datasets: [
-        { label: 'Solo risparmio (0%)',               data: noInterest, borderColor: '#94A3B8', borderWidth: 2, tension: 0.3, fill: false },
-        { label: 'Conto deposito (2%)',                data: low,        borderColor: '#2563EB', borderWidth: 2, tension: 0.3, fill: false },
-        { label: 'Investimento moderato (5%)',          data: mid,        borderColor: '#16A34A', borderWidth: 3, tension: 0.3, fill: { target: 'origin', above: 'rgba(22,163,74,0.06)' } },
-        { label: 'Potere acquisto reale (inflaz. 2%)', data: realPower,  borderColor: '#DC2626', borderWidth: 2, tension: 0.3, fill: false, borderDash: [6, 4] }
+        { label: 'Solo risparmio (0%)',                  data: noInterest,  borderColor: '#94A3B8', borderWidth: 1.5, tension: 0.3, fill: false, pointRadius: 0 },
+        { label: 'Conto deposito (2%)',                   data: low,         borderColor: '#2563EB', borderWidth: 1.5, tension: 0.3, fill: false, pointRadius: 0 },
+        { label: 'Investimento ottimistico (5%)',          data: mid,         borderColor: '#16A34A', borderWidth: 2.5, tension: 0.3, fill: { target: 'origin', above: 'rgba(22,163,74,0.05)' }, pointRadius: 0 },
+        { label: 'Realistico con imprevisti',             data: realistic,   borderColor: '#F59E0B', borderWidth: 2.5, tension: 0.2, fill: false, borderDash: [5, 3], pointRadius: 0 },
+        { label: 'Con crescita stipendio (+3%/anno)',     data: progressive, borderColor: '#06B6D4', borderWidth: 2,   tension: 0.3, fill: false, borderDash: [3, 2], pointRadius: 0 },
+        { label: 'Potere acquisto reale (inflaz. 2%)',    data: realPower,   borderColor: '#EF4444', borderWidth: 1.5, tension: 0.3, fill: false, borderDash: [8, 4], pointRadius: 0 },
       ]
     },
     options: {
@@ -69,16 +102,18 @@ export function renderSimulation() {
         legend: { display: false },
         tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmt(c.raw) } }
       },
-      scales: { y: { ticks: { callback: v => fmt(v) } } }
+      scales: { y: { ticks: { callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,0.04)' } } }
     }
   });
 
   // Legenda testuale
   document.getElementById('chartLegendDesc').innerHTML = `
-    <div class="legend-item"><div class="legend-dot" style="background:#94A3B8"></div>Risparmio puro: soldi sul conto, senza interessi</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#94A3B8"></div>Risparmio puro: soldi sul conto, senza interessi né rendimenti</div>
     <div class="legend-item"><div class="legend-dot" style="background:#2563EB"></div>Conto deposito al 2% annuo: rendimento basso ma sicuro</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#16A34A"></div>Investimento moderato al 5% annuo: rendimento storico tipico dei fondi bilanciati</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#DC2626"></div>Potere d'acquisto reale: quanto valgono i risparmi dopo l'inflazione al 2%</div>`;
+    <div class="legend-item"><div class="legend-dot" style="background:#16A34A"></div>Investimento ottimistico al 5% annuo: scenario ideale senza interruzioni</div>
+    <div class="legend-item"><div class="legend-dot legend-dot--dashed" style="background:#F59E0B"></div>Realistico con imprevisti: 10 mesi/anno effettivi + emergenze agli anni 5, 10, 15</div>
+    <div class="legend-item"><div class="legend-dot legend-dot--dashed" style="background:#06B6D4"></div>Con crescita stipendio: risparmio +3% all'anno (carriera), investito al 5%</div>
+    <div class="legend-item"><div class="legend-dot legend-dot--dashed" style="background:#EF4444"></div>Potere d'acquisto reale: erosione inflazione al 2% sui risparmi fermi</div>`;
 
   renderTips();
 }

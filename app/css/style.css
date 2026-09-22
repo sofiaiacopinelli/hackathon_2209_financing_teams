@@ -374,6 +374,7 @@ body {
   padding: 10px 12px; font-size: 0.78rem; color: var(--muted); line-height: 1.45;
 }
 .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+.legend-dot--dashed { border-radius: 2px; width: 14px; height: 3px; margin-top: 5px; }
 
 /* ── AI Banner ── */
 .ai-banner {
