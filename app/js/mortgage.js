@@ -175,6 +175,9 @@ function formatMortgageCoachOutput(text) {
   return `<div class="action-list">${items.join('')}</div>`;
 }
 
+// Traccia lo status dell'ultimo aggiornamento del simulatore per evitare chiamate ridondanti
+let _lastSimStatus = null;
+
 /**
  * Aggiorna il simulatore mutuo interattivo in base ai valori correnti degli slider.
  * Mostra rata, costo totale, incidenza sul reddito e stress test dei tassi.
@@ -228,6 +231,17 @@ export function updateMortgageSim() {
     </div>
     ${MARKET_RATES.live ? `<p style="font-size:0.78rem;color:var(--muted);margin-top:8px">📡 Tasso di riferimento aggiornato da BCE${MARKET_RATES.dateRef ? ' · ' + MARKET_RATES.dateRef : ''}</p>` : ''}
     ${stressBlock}`;
+
+  // Mostra suggerimenti AI sotto il simulatore solo quando la rata non è sostenibile,
+  // e solo se lo status è cambiato (evita chiamate ridondanti ad ogni slider move)
+  const simStatus = !sostenibile
+    ? (rataVsReddito && parseFloat(rataVsReddito) >= 40 ? 'danger' : 'warning')
+    : 'ok';
+
+  if (simStatus !== _lastSimStatus) {
+    _lastSimStatus = simStatus;
+    renderMortgageActions(simStatus, monthlySavings());
+  }
 }
 
 /**
