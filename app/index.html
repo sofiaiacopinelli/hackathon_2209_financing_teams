@@ -237,67 +237,66 @@
 
       <div class="step-nav" style="margin-top:32px">
         <button class="btn btn-ghost" onclick="app.showStep('simulation')">← Torna alla simulazione</button>
-        <button class="btn btn-primary" onclick="app.showStep('evaluator')">Ho già un preventivo →</button>
+        <button class="btn btn-primary" onclick="app.goToEvaluator()">Ho già un preventivo →</button>
       </div>
       <div style="text-align:center; margin-top:12px">
         <button class="btn btn-ghost" onclick="app.restart()" style="font-size:0.8rem">Ricomincia dall'inizio 🔄</button>
       </div>
     </div>
 
-    <!-- ══ STEP 6: Valuta Preventivo [Opzionale] ══ -->
+    <!-- ══ STEP 6: Valuta Preventivo ══ -->
     <div class="step" id="step-evaluator">
       <div class="step-header">
-        <div class="step-badge">Opzionale</div>
-        <h2>Valuta il tuo preventivo</h2>
-        <p class="step-subtitle">Hai già ricevuto un'offerta dalla banca? Inserisci i dati e ti diciamo se è adatta a te.</p>
+        <h2>🔍 Analizza il tuo preventivo</h2>
+        <p class="step-subtitle" id="evalSubtitle">Inserisci i dati dell'offerta ricevuta dalla banca — ti diciamo se è buona, cosa puoi negoziare e quanto ti costerà davvero.</p>
       </div>
 
       <div class="eval-grid">
         <div class="eval-field">
-          <label>Importo richiesto</label>
+          <label>🏠 Importo richiesto</label>
           <div class="input-group"><span class="input-prefix">€</span>
-            <input type="number" id="evalAmount" placeholder="150000" oninput="app.runEvaluation()">
+            <input type="number" id="evalAmount" placeholder="150.000" oninput="app.runEvaluation()">
           </div>
         </div>
         <div class="eval-field">
-          <label>Valore immobile</label>
+          <label>🏡 Valore immobile</label>
           <div class="input-group"><span class="input-prefix">€</span>
-            <input type="number" id="evalPropertyValue" placeholder="200000" oninput="app.runEvaluation()">
+            <input type="number" id="evalPropertyValue" placeholder="200.000" oninput="app.runEvaluation()">
           </div>
         </div>
         <div class="eval-field">
-          <label>Durata (anni)</label>
-          <div class="input-group"><span class="input-prefix">yr</span>
+          <label>📅 Durata</label>
+          <div class="input-group"><span class="input-prefix">anni</span>
             <input type="number" id="evalDuration" placeholder="25" min="5" max="30" oninput="app.runEvaluation()">
           </div>
         </div>
         <div class="eval-field">
-          <label>Tasso nominale annuo</label>
+          <label>📈 Tasso nominale annuo</label>
           <div class="input-group"><span class="input-prefix">%</span>
-            <input type="number" id="evalRate" placeholder="3.5" step="0.1" oninput="app.runEvaluation()">
+            <input type="number" id="evalRate" placeholder="3.50" step="0.01" oninput="app.runEvaluation()">
           </div>
         </div>
         <div class="eval-field">
-          <label>TAEG dichiarato</label>
+          <label>💯 TAEG dichiarato</label>
           <div class="input-group"><span class="input-prefix">%</span>
-            <input type="number" id="evalTAEG" placeholder="4.2" step="0.1" oninput="app.runEvaluation()">
+            <input type="number" id="evalTAEG" placeholder="4.20" step="0.01" oninput="app.runEvaluation()">
           </div>
         </div>
         <div class="eval-field">
-          <label>Rata mensile (dichiarata)</label>
+          <label>💳 Rata mensile dichiarata</label>
           <div class="input-group"><span class="input-prefix">€</span>
             <input type="number" id="evalRata" placeholder="820" oninput="app.runEvaluation()">
           </div>
         </div>
         <div class="eval-field">
-          <label>Spese iniziali totali</label>
+          <label>🧾 Spese iniziali (istruttoria, ecc.)</label>
           <div class="input-group"><span class="input-prefix">€</span>
-            <input type="number" id="evalFees" placeholder="2500" oninput="app.runEvaluation()">
+            <input type="number" id="evalFees" placeholder="2.500" oninput="app.runEvaluation()">
           </div>
         </div>
         <div class="eval-field">
-          <label>Tipo tasso</label>
-          <select id="evalRateType" onchange="app.runEvaluation()" style="padding:9px 12px; background:var(--bg-card2); color:var(--text); border:1px solid var(--border-hi); font-family:inherit; font-size:0.9rem; width:100%; outline:none;">
+          <label>⚖️ Tipo di tasso</label>
+          <select id="evalRateType" onchange="app.runEvaluation()" class="eval-select">
             <option value="fisso">Fisso</option>
             <option value="variabile">Variabile</option>
             <option value="misto">Misto</option>
@@ -311,12 +310,12 @@
         <div class="ai-banner-left">
           <span class="ai-icon">🤖</span>
           <div>
-            <strong>Analisi AI del preventivo</strong>
-            <span>Claude analizza l'offerta tramite il server locale e ti dice cosa negoziare</span>
+            <strong>Parere AI sul preventivo</strong>
+            <span>Claude legge i numeri, identifica i punti deboli e ti dice cosa negoziare con la banca</span>
           </div>
         </div>
         <div class="ai-banner-right">
-          <button class="btn btn-ai" onclick="app.requestEvalAI()">Analizza con AI</button>
+          <button class="btn btn-ai" onclick="app.requestEvalAI()">Chiedi a Claude →</button>
         </div>
       </div>
 
@@ -326,7 +325,7 @@
       </div>
 
       <div class="step-nav" style="margin-top:32px">
-        <button class="btn btn-ghost" onclick="app.showStep('mortgage')">← Torna all'affordability</button>
+        <button class="btn btn-ghost" onclick="app.showStep('mortgage')">← Torna al mutuo</button>
         <button class="btn btn-primary" onclick="app.restart()">Ricomincia 🔄</button>
       </div>
     </div>

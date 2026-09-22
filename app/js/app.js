@@ -1270,6 +1270,33 @@ const app = (() => {
   }
 
   // ── Valutazione Preventivo ──
+  function goToEvaluator() {
+    // Subtitle adattivo al livello
+    const evalSubtitles = {
+      principiante: "Hai già un'offerta dalla banca? Incolla i numeri qui — ti spieghiamo cosa significano, se il tasso è buono e cosa puoi chiedere di cambiare.",
+      intermedio:   "Analizza l'offerta ricevuta: confrontiamo tasso, LTV e sostenibilità con i dati di mercato per dirti se conviene o dove negoziare.",
+      esperto:      "Inserisci i parametri del preventivo per un'analisi LTV/DSC, delta rata calcolata vs dichiarata, stress test e benchmark vs tasso BCE.",
+    };
+    const subEl = document.getElementById('evalSubtitle');
+    if (subEl) subEl.textContent = evalSubtitles[state.level] || evalSubtitles.principiante;
+
+    // Pre-fill dall'ultimo valore del simulatore, se disponibile
+    const simAmount   = document.getElementById('simAmount');
+    const simDuration = document.getElementById('simDuration');
+    const simRate     = document.getElementById('simRate');
+    if (simAmount && parseFloat(simAmount.value) > 0) {
+      const evalAmount = document.getElementById('evalAmount');
+      const evalDuration = document.getElementById('evalDuration');
+      const evalRate = document.getElementById('evalRate');
+      if (evalAmount && !evalAmount.value)   evalAmount.value   = simAmount.value;
+      if (evalDuration && !evalDuration.value) evalDuration.value = simDuration.value;
+      if (evalRate && !evalRate.value)       evalRate.value     = parseFloat(simRate.value).toFixed(2);
+      runEvaluation();
+    }
+
+    showStep('evaluator');
+  }
+
   function runEvaluation() {
     const amount    = parseFloat(document.getElementById('evalAmount').value) || 0;
     const propValue = parseFloat(document.getElementById('evalPropertyValue').value) || 0;
@@ -1336,21 +1363,51 @@ const app = (() => {
         <p class="ect-note">Paghi <strong>${fmt(totaleInteressi)}</strong> di interessi — cioè il <strong>${(totaleInteressi / amount * 100).toFixed(0)}%</strong> in più rispetto a quanto hai ricevuto.</p>
       </div>`;
 
+    // Punteggio offerta (0-100)
+    const scoreMap = { ok: 100, warning: 55, danger: 20, neutral: 50 };
+    const score = Math.round(indicators.reduce((s, i) => s + scoreMap[i.status], 0) / indicators.length);
+    const scoreColor = score >= 75 ? 'var(--success)' : score >= 45 ? 'var(--warning)' : 'var(--danger)';
+    const scoreEmoji = score >= 75 ? '🟢' : score >= 45 ? '🟡' : '🔴';
+
+    // Rata calcolata vs dichiarata
+    const rataCalc = calcolaRata(amount, rate, duration);
+    const rataDiff = rata > 0 ? (rata - rataCalc) : null;
+    const rataDiffText = rataDiff !== null
+      ? (Math.abs(rataDiff) < 5 ? '≈ coincide con la dichiarata' : rataDiff > 0 ? `+${fmt(rataDiff)} rispetto al calcolato — verifica` : `${fmt(rataDiff)} rispetto al calcolato — ok`)
+      : '';
+
     document.getElementById('evalResult').style.display = 'block';
     document.getElementById('evalResult').innerHTML = `
-      <div style="border-left:3px solid ${statusColor[overallStatus]}; background:var(--bg-card); border:1px solid var(--border); padding:16px 20px; margin-bottom:12px">
-        <strong style="font-size:1rem; display:block; margin-bottom:4px">${overallLabel[overallStatus]}</strong>
-        <span style="color:var(--muted); font-size:0.82rem">Tipo: ${rateType} | Durata: ${duration} anni | TAEG dichiarato: ${taeg || '—'}%</span>
+      <!-- Score card -->
+      <div class="eval-score-card" style="border-color:${scoreColor}">
+        <div class="esc-left">
+          <div class="esc-score" style="color:${scoreColor}">${scoreEmoji} ${score}<span style="font-size:1rem;color:var(--muted)">/100</span></div>
+          <div class="esc-label">${overallLabel[overallStatus]}</div>
+        </div>
+        <div class="esc-right">
+          <div class="esc-tag">Tipo: <b>${rateType}</b></div>
+          <div class="esc-tag">Durata: <b>${duration} anni</b></div>
+          <div class="esc-tag">TAEG: <b>${taeg ? taeg + '%' : '—'}</b></div>
+          ${rataDiffText ? `<div class="esc-tag" style="color:var(--muted);font-size:0.78rem">Rata calcolata: ${fmt(rataCalc)} — ${rataDiffText}</div>` : ''}
+        </div>
       </div>
-      ${costoBlock}
-      ${indicators.map(ind => `
-        <div class="eval-indicator" style="border-left:3px solid ${statusColor[ind.status]}">
-          <div class="ei-header">
-            <span class="ei-label">${ind.label}</span>
-            <span class="ei-value" style="color:${statusColor[ind.status]}">${ind.value}</span>
-          </div>
-          <p class="ei-detail">${ind.detail}</p>
-        </div>`).join('')}`;
+
+      <!-- Indicatori con barre -->
+      <div class="eval-indicators-grid">
+        ${indicators.map(ind => {
+          const barPct = { ok: 85, warning: 50, danger: 20, neutral: 50 }[ind.status];
+          return `<div class="eval-indicator-card" style="border-top:3px solid ${statusColor[ind.status]}">
+            <div class="eic-header">
+              <span class="eic-label">${ind.label}</span>
+              <span class="eic-value" style="color:${statusColor[ind.status]}">${ind.value}</span>
+            </div>
+            <div class="eic-bar-bg"><div class="eic-bar-fill" style="width:${barPct}%;background:${statusColor[ind.status]}"></div></div>
+            <p class="eic-detail">${ind.detail}</p>
+          </div>`;
+        }).join('')}
+      </div>
+
+      ${costoBlock}`;
 
     document.getElementById('evalAiBanner').style.display = 'flex';
     state.evalData = { amount, propValue, duration, rate, taeg, rata, fees, rateType, ltv, rataVsReddito, overallStatus };
@@ -1427,6 +1484,6 @@ const app = (() => {
   }
 
   // ── Public API ──
-  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToProfile, goToSimulation, updateSavings, fillAverageValues, showStep, requestAIAnalysis, restart, goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI, requestExpenseAI };
+  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToProfile, goToSimulation, updateSavings, fillAverageValues, showStep, requestAIAnalysis, restart, goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI, requestExpenseAI, goToEvaluator };
 
 })();
