@@ -62,7 +62,14 @@ hackathon_2209_financing_teams/
 │   ├── tip-explainer.js
 │   ├── mortgage-coach.js
 │   └── prompts/            — template .md con {{PLACEHOLDER}}
-├── tests/                  — test suite Node nativa
+├── tests/                  — test suite Node nativa (7 suite, ~80 test)
+│   ├── constants.test.mjs  — invarianti costanti (QUIZ, PROFILES, CATEGORIES)
+│   ├── state.test.mjs      — struttura e mutabilità dello stato globale
+│   ├── utils.test.mjs      — funzioni pure di calcolo e formattazione
+│   ├── navigation.test.mjs — logica navigazione tra step
+│   ├── market-rates.test.mjs — struttura e mutabilità di MARKET_RATES
+│   ├── quiz.test.mjs       — computeScores: punteggi, contesti, level
+│   └── expenses.test.mjs   — buildVisibleCategories: categorie e hint contestuali
 ├── CLAUDE.md               — istruzioni per Claude Code
 └── package.json            — npm start + npm test
 ```
@@ -71,7 +78,7 @@ hackathon_2209_financing_teams/
 
 ## Flusso utente
 
-1. **Quiz** — 6 domande su conoscenza finanziaria, stile di vita e contesto abitativo
+1. **Quiz** — 15 domande su conoscenza finanziaria, stile di vita e contesto abitativo
 2. **Spese** — inserimento spese mensili per categoria con suggerimento AI
 3. **Profilo** — punteggio knowledge/lifestyle, livello (principiante/intermedio/esperto)
 4. **Simulazione** — grafico 20 anni con 6 scenari (pessimistico → ottimistico → realistico con imprevisti → crescita stipendio); tip card cliccabili con approfondimento AI

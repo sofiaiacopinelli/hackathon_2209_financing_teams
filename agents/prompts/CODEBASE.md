@@ -125,7 +125,15 @@ Ogni agente: `loadPrompt(name, vars)` riempe il template `.md` con `{{PLACEHOLDE
 | `utils.test.mjs` | Funzioni pure di calcolo e formattazione |
 | `market-rates.test.mjs` | Struttura e mutabilità di MARKET_RATES |
 | `navigation.test.mjs` | Logica di navigazione tra step |
+| `quiz.test.mjs` | `computeScores()`: calcolo knowledgeScore/lifestyleScore, popolamento mortgageContext/lifestyleContext, derivazione level |
+| `expenses.test.mjs` | `buildVisibleCategories()`: selezione categoria housing, conteggio categorie, hint contestuali per città/auto/figli/famiglia |
 | `REPORT.md` | Ultimo report di esecuzione dei test |
+
+### Copertura: cosa è testabile e cosa no
+
+I moduli **non testabili** (usano il DOM o fetch reali) sono: `main.js`, `profile.js`, `simulation.js` (le serie sono funzioni private), `mortgage.js`, `ai.js`, `market-data.js`.
+
+La regola pratica: se un modulo ha funzioni pure o quasi-pure che non chiamano `document.*` né `fetch`, si può testare. Se tutto il modulo accede al DOM direttamente, si salta.
 
 ---
 
