@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "app",
+      "name": "FinanzaFacile",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8080", "--directory", "app"],
-      "port": 8080
+      "runtimeArgs": ["-m", "http.server", "8081", "--directory", "app"],
+      "port": 8081
     }
   ]
 }

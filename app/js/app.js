@@ -5,6 +5,89 @@
 const MARKET_RATES = { fisso: 3.5, variabile: 2.8, taeg_medio: 4.2 };
 const MORTGAGE_DURATIONS = [10, 15, 20, 25, 30];
 
+/* ============================================================
+   MarketDataSkill — recupera dati finanziari aggiornati
+   Parte in background dopo il completamento del quiz.
+   Non richiede API key: usa fonti pubbliche (BCE SDMX REST API).
+   ============================================================ */
+const MarketDataSkill = (() => {
+
+  const ECB_BASE = 'https://sdw-wsrest.ecb.europa.eu/service/data';
+
+  async function fetchSeries(path, lastN = 1) {
+    const url = `${ECB_BASE}/${path}?lastNObservations=${lastN}&format=jsondata`;
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!r.ok) throw new Error(`ECB ${r.status}`);
+    return r.json();
+  }
+
+  function parseLatest(json) {
+    const series = Object.values(json.dataSets[0].series)[0];
+    const obsKeys = Object.keys(series.observations).sort((a, b) => +a - +b);
+    const lastKey = obsKeys[obsKeys.length - 1];
+    const value = series.observations[lastKey][0];
+    const dateLabel = json.structure.dimensions.observation[0].values[+lastKey]?.name || '';
+    return { value, date: dateLabel };
+  }
+
+  async function fetchAll() {
+    const [ecbRate, fixedMir, varMir, hicp] = await Promise.allSettled([
+      fetchSeries('FM/B.U2.EUR.4F.KR.MRR_FR.LEV'),
+      fetchSeries('MIR/M.IT.B.A2A.AM.R.A.2240.EUR.N', 2),
+      fetchSeries('MIR/M.IT.B.A2C.AM.R.A.2240.EUR.N', 2),
+      fetchSeries('ICP/M.IT.N.000000.4.ANR', 2)
+    ]);
+
+    return {
+      bceRate:     ecbRate.status === 'fulfilled'    ? parseLatest(ecbRate.value)    : null,
+      fisso:       fixedMir.status === 'fulfilled'   ? parseLatest(fixedMir.value)   : null,
+      variabile:   varMir.status === 'fulfilled'     ? parseLatest(varMir.value)     : null,
+      inflazione:  hicp.status === 'fulfilled'       ? parseLatest(hicp.value)       : null,
+      fetchedAt:   new Date().toLocaleString('it-IT')
+    };
+  }
+
+  // Aggiorna MARKET_RATES con i dati reali; restituisce true se almeno un valore è stato ottenuto
+  function applyToMarketRates(data) {
+    let anyFetched = false;
+    if (data.fisso)     { MARKET_RATES.fisso     = parseFloat(data.fisso.value.toFixed(2));     anyFetched = true; }
+    if (data.variabile) { MARKET_RATES.variabile = parseFloat(data.variabile.value.toFixed(2)); anyFetched = true; }
+    if (data.bceRate)   { MARKET_RATES.bce       = parseFloat(data.bceRate.value.toFixed(2));   anyFetched = true; }
+    if (data.inflazione){ MARKET_RATES.inflazione = parseFloat(data.inflazione.value.toFixed(1)); anyFetched = true; }
+    if (anyFetched) {
+      MARKET_RATES.live      = true;
+      MARKET_RATES.fetchedAt = data.fetchedAt;
+      MARKET_RATES.dateRef   = data.fisso?.date || data.variabile?.date || '';
+    }
+    return anyFetched;
+  }
+
+  function buildSummaryText(data, anyFetched) {
+    if (!anyFetched) {
+      return `📋 Dati BCE non raggiungibili — in uso valori di riferimento:\n• Tasso fisso: ${MARKET_RATES.fisso}% · Variabile: ${MARKET_RATES.variabile}%`;
+    }
+    const lines = ['📡 Dati aggiornati (BCE / Banca d\'Italia):'];
+    if (data.bceRate)    lines.push(`• Tasso BCE: ${data.bceRate.value.toFixed(2)}% (${data.bceRate.date})`);
+    if (data.fisso)      lines.push(`• Tassi fissi mutui IT: ${data.fisso.value.toFixed(2)}% (${data.fisso.date})`);
+    if (data.variabile)  lines.push(`• Tassi variabili mutui IT: ${data.variabile.value.toFixed(2)}% (${data.variabile.date})`);
+    if (data.inflazione) lines.push(`• Inflazione IT (HICP): ${data.inflazione.value.toFixed(1)}% (${data.inflazione.date})`);
+    return lines.join('\n');
+  }
+
+  // Entry point: avvia in background, risolve con i dati ottenuti
+  async function run() {
+    try {
+      const data = await fetchAll();
+      const anyFetched = applyToMarketRates(data);
+      return { ok: anyFetched, summary: buildSummaryText(data, anyFetched), data };
+    } catch (e) {
+      return { ok: false, summary: `📋 BCE non raggiungibile — in uso valori di riferimento:\n• Tasso fisso: ${MARKET_RATES.fisso}% · Variabile: ${MARKET_RATES.variabile}%`, data: null };
+    }
+  }
+
+  return { run };
+})();
+
 function calcolaRata(importo, tassoAnnuo, durataAnni) {
   const r = tassoAnnuo / 100 / 12;
   const n = durataAnni * 12;
@@ -33,7 +116,9 @@ const app = (() => {
     income: 0,
     expenses: {},
     evalData: null,
-    chart: null
+    chart: null,
+    marketDataReady: false,
+    marketDataSummary: ''
   };
 
   // ── Quiz data ──
@@ -618,6 +703,13 @@ const app = (() => {
       if (q.type === 'lifestyle_context') state.lifestyleContext[i] = ans;
     });
     state.level = getProfile().id;
+
+    // Avvia MarketDataSkill in background: aggiorna i tassi prima che l'utente arrivi al mutuo
+    state.marketDataReady = false;
+    MarketDataSkill.run().then(result => {
+      state.marketDataReady = true;
+      state.marketDataSummary = result.summary;
+    });
   }
 
   // ── Profilo ──
@@ -657,9 +749,137 @@ const app = (() => {
   }
 
   // ── Spese ──
+  // Medie ISTAT approssimate per single/coppia in Italia
+  const ISTAT_AVERAGES = {
+    affitto: 700, spesa: 280, ristoranti: 130, trasporti: 90,
+    bollette: 110, abbonamenti: 45, shopping: 90, salute: 45, svago: 70, altro: 40
+  };
+
   function goToExpenses() {
     renderExpenseForm();
     showStep('expenses');
+  }
+
+  function fillAverageValues() {
+    document.querySelectorAll('[data-cat]').forEach(inp => {
+      inp.value = ISTAT_AVERAGES[inp.dataset.cat] || 0;
+    });
+    updateSavings();
+  }
+
+  // ── AI Expense Suggestion Skill ──
+  // Legge le risposte del quiz (stile di vita) + i valori già inseriti dall'utente
+  // e chiede a Claude di stimare i valori mancanti in modo personalizzato.
+  async function requestExpenseAI() {
+    const apiKey = document.getElementById('expenseApiKeyInput').value.trim();
+    if (!apiKey) {
+      alert('Inserisci una Claude API key per usare il suggerimento AI.');
+      return;
+    }
+
+    const btn = document.getElementById('btnExpenseAI');
+    btn.textContent = '⏳ Analisi in corso…';
+    btn.disabled = true;
+
+    // Raccoglie i valori già inseriti dall'utente
+    const alreadyFilled = {};
+    document.querySelectorAll('[data-cat]').forEach(inp => {
+      const val = parseFloat(inp.value);
+      if (val > 0) alreadyFilled[inp.dataset.cat] = val;
+    });
+    const income = parseFloat(document.getElementById('incomeInput').value) || 0;
+
+    // Costruisce il contesto dal quiz (domande stile di vita e contesto mutuo)
+    const lifestyleCtx = QUIZ.filter(q => q.type === 'lifestyle').map((q, i) => {
+      const qIdx = QUIZ.indexOf(q);
+      const ans = state.answers[qIdx];
+      return ans !== null ? `- ${q.text}: "${q.options[ans]}"` : null;
+    }).filter(Boolean).join('\n');
+
+    const mortgageCtx = QUIZ.filter(q => q.type === 'mortgage_context').map(q => {
+      const qIdx = QUIZ.indexOf(q);
+      const ans = state.answers[qIdx];
+      return ans !== null ? `- ${q.text}: "${q.options[ans]}"` : null;
+    }).filter(Boolean).join('\n');
+
+    const alreadyFilledText = Object.keys(alreadyFilled).length > 0
+      ? Object.entries(alreadyFilled).map(([k, v]) => `- ${k}: €${v}`).join('\n')
+      : '- Nessun valore inserito ancora';
+
+    const incomeNote = income > 0
+      ? `Reddito netto dichiarato: €${income}/mese. Il totale spese non dovrebbe superare €${Math.round(income * 0.88)}.`
+      : 'Reddito non ancora indicato.';
+
+    const prompt = `Sei un consulente finanziario italiano. Devi stimare spese mensili realistiche per un utente in base al suo profilo.
+
+PROFILO UTENTE (dal quiz):
+- Livello finanziario: ${getProfile().title} (${state.level})
+- Conoscenza finanziaria: ${state.knowledgeScore}/3
+- Gestione denaro: ${state.lifestyleScore}/6
+- ${incomeNote}
+
+RISPOSTE DEL QUIZ — stile di vita:
+${lifestyleCtx || '- Non disponibili'}
+
+RISPOSTE DEL QUIZ — obiettivo abitativo:
+${mortgageCtx || '- Non disponibili'}
+
+VALORI GIÀ INSERITI DALL'UTENTE (preservali esattamente):
+${alreadyFilledText}
+
+Stima i valori mensili realistici per questo specifico profilo. Per le categorie già inserite dall'utente usa ESATTAMENTE quei valori. Per le categorie vuote, stima un importo realistico coerente con il profilo e lo stile di vita descritto.
+
+Categorie: affitto, spesa, ristoranti, trasporti, bollette, abbonamenti, shopping, salute, svago, altro.
+
+Rispondi SOLO con un oggetto JSON valido, senza testo prima o dopo:
+{"affitto":0,"spesa":0,"ristoranti":0,"trasporti":0,"bollette":0,"abbonamenti":0,"shopping":0,"salute":0,"svago":0,"altro":0}`;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || 'Errore API');
+      }
+
+      const data = await response.json();
+      const raw = data.content[0].text.trim();
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Risposta AI non riconosciuta');
+      const suggested = JSON.parse(match[0]);
+
+      // Applica i valori: i campi già inseriti dall'utente non vengono sovrascritti
+      document.querySelectorAll('[data-cat]').forEach(inp => {
+        const cat = inp.dataset.cat;
+        if (alreadyFilled[cat]) return; // preserva valore utente
+        if (suggested[cat] !== undefined) inp.value = Math.round(suggested[cat]);
+      });
+      updateSavings();
+
+      btn.textContent = '✅ Valori suggeriti';
+      setTimeout(() => {
+        btn.textContent = '✨ Suggerisci con AI';
+        btn.disabled = false;
+      }, 2500);
+
+    } catch (err) {
+      alert('Errore suggerimento AI: ' + err.message);
+      btn.textContent = '✨ Suggerisci con AI';
+      btn.disabled = false;
+    }
   }
 
   function renderExpenseForm() {
@@ -883,6 +1103,10 @@ const app = (() => {
     const status = rataPct >= 20 ? 'ok' : rataPct >= 10 ? 'warning' : 'danger';
     const statusLabel = { ok: '✅ Situazione favorevole per un mutuo', warning: '⚠️ Margine limitato — valuta con attenzione', danger: '❌ Da rafforzare prima di accendere un mutuo' };
 
+    const liveTag = MARKET_RATES.live
+      ? `<span class="market-live-badge" title="${state.marketDataSummary}">📡 Dati live BCE${MARKET_RATES.dateRef ? ' · ' + MARKET_RATES.dateRef : ''}</span>`
+      : `<span class="market-live-badge market-live-badge--fallback">📋 Dati stimati</span>`;
+
     document.getElementById('mortgageResultCard').innerHTML = `
       <div class="mortgage-status ${status}">
         <div class="ms-icon">${status === 'ok' ? '🏠' : status === 'warning' ? '⚠️' : '🔴'}</div>
@@ -899,7 +1123,7 @@ const app = (() => {
           return `<div class="mt-row"><span>${d} anni</span><span class="mt-amount">${fmt(imp)}</span><span class="mt-rata">${fmt(rata)}/mese</span></div>`;
         }).join('')}
       </div>
-      <p class="mt-note">* Calcolato con tasso fisso ${MARKET_RATES.fisso}% (riferimento mercato ${new Date().getFullYear()}). Il TAEG effettivo varia per banca.</p>`;
+      <p class="mt-note">${liveTag} Calcolato con tasso fisso ${MARKET_RATES.fisso}% · variabile ${MARKET_RATES.variabile}%${MARKET_RATES.inflazione ? ' · inflazione ' + MARKET_RATES.inflazione + '%' : ''}. Il TAEG effettivo varia per banca.</p>`;
 
     updateMortgageSim();
   }
@@ -919,6 +1143,28 @@ const app = (() => {
     const rataVsReddito = state.income > 0 ? (rata / state.income * 100).toFixed(1) : null;
     const sostenibile = state.income > 0 && rata <= state.income * 0.30;
 
+    // Stress test: rata se il tasso sale di +1% e +2%
+    const rataStress1 = calcolaRata(amount, rate + 1, duration);
+    const rataStress2 = calcolaRata(amount, rate + 2, duration);
+    const stress1Pct = state.income > 0 ? (rataStress1 / state.income * 100).toFixed(1) : null;
+    const stress2Pct = state.income > 0 ? (rataStress2 / state.income * 100).toFixed(1) : null;
+    const stressBlock = rate < 8 ? `
+      <div class="stress-test">
+        <div class="stress-title">📊 Stress test tasso</div>
+        <div class="stress-row">
+          <span>Tasso attuale <strong>${rate.toFixed(1)}%</strong></span>
+          <span style="color:${sostenibile ? 'var(--success)' : 'var(--danger)'}">${fmt(rata)}/mese${rataVsReddito ? ' · ' + rataVsReddito + '% reddito' : ''}</span>
+        </div>
+        ${rate + 1 <= 8 ? `<div class="stress-row">
+          <span>Se sale a <strong>${(rate + 1).toFixed(1)}%</strong></span>
+          <span style="color:${stress1Pct && stress1Pct < 30 ? 'var(--warning)' : 'var(--danger)'}">${fmt(rataStress1)}/mese${stress1Pct ? ' · +' + fmt(rataStress1 - rata) : ''}</span>
+        </div>` : ''}
+        ${rate + 2 <= 8 ? `<div class="stress-row">
+          <span>Se sale a <strong>${(rate + 2).toFixed(1)}%</strong></span>
+          <span style="color:var(--danger)">${fmt(rataStress2)}/mese${stress2Pct ? ' · +' + fmt(rataStress2 - rata) : ''}</span>
+        </div>` : ''}
+      </div>` : '';
+
     document.getElementById('simResult').innerHTML = `
       <div class="sim-metrics">
         <div class="sim-metric"><span class="sm-label">Rata mensile</span><span class="sm-val" style="color:${sostenibile ? 'var(--success)' : 'var(--danger)'}">${fmt(rata)}</span></div>
@@ -928,7 +1174,9 @@ const app = (() => {
       </div>
       <div style="background:${sostenibile ? 'var(--success-dim)' : 'var(--danger-dim)'}; border-left:3px solid ${sostenibile ? 'var(--success)' : 'var(--danger)'}; padding:12px 16px; margin-top:12px; font-size:0.88rem; color:var(--text)">
         ${sostenibile ? '✅ Questa rata è sostenibile (< 30% del reddito)' : '⚠️ Questa rata supera il 30% del reddito — rischio elevato'}
-      </div>`;
+      </div>
+      ${MARKET_RATES.live ? `<p style="font-size:0.78rem;color:var(--muted);margin-top:8px">📡 Tasso di riferimento aggiornato da BCE${MARKET_RATES.dateRef ? ' · ' + MARKET_RATES.dateRef : ''}</p>` : ''}
+      ${stressBlock}`;
   }
 
   // ── Valutazione Preventivo ──
@@ -964,9 +1212,9 @@ const app = (() => {
       },
       {
         label: 'Competitività tasso vs mercato',
-        value: rate.toFixed(2) + '% (benchmark: ' + MARKET_RATES.fisso + '%)',
+        value: rate.toFixed(2) + '% (benchmark' + (MARKET_RATES.live ? ' live' : '') + ': ' + MARKET_RATES.fisso + '%)',
         status: rate <= MARKET_RATES.fisso ? 'ok' : rate <= MARKET_RATES.fisso + 0.5 ? 'warning' : 'danger',
-        detail: rate <= MARKET_RATES.fisso ? 'Ottimo: in linea o sotto la media di mercato' : rate <= MARKET_RATES.fisso + 0.5 ? 'Leggermente sopra la media — prova a negoziare' : 'Sopra la media di mercato — confronta altri istituti'
+        detail: (rate <= MARKET_RATES.fisso ? 'Ottimo: in linea o sotto la media di mercato' : rate <= MARKET_RATES.fisso + 0.5 ? 'Leggermente sopra la media — prova a negoziare' : 'Sopra la media di mercato — confronta altri istituti') + (MARKET_RATES.live ? ` (dati BCE${MARKET_RATES.dateRef ? ' · ' + MARKET_RATES.dateRef : ''})` : ' (dati stimati)')
       }
     ];
 
@@ -974,12 +1222,37 @@ const app = (() => {
                           indicators.some(i => i.status === 'warning') ? 'warning' : 'ok';
     const overallLabel = { ok: '✅ Preventivo complessivamente buono', warning: '⚠️ Preventivo accettabile con riserve', danger: '❌ Preventivo da rivedere o negoziare' };
 
+    // Costo totale del mutuo
+    const rataCalcolata = rata > 0 ? rata : calcolaRata(amount, rate, duration);
+    const costoTotale = rataCalcolata * 12 * duration;
+    const totaleInteressi = costoTotale - amount;
+    const costoBlock = `
+      <div class="eval-costo-totale">
+        <div class="ect-title">💸 Quanto ti costa davvero questo mutuo</div>
+        <div class="ect-metrics">
+          <div class="ect-metric">
+            <span class="ect-label">Importo finanziato</span>
+            <span class="ect-val">${fmt(amount)}</span>
+          </div>
+          <div class="ect-metric">
+            <span class="ect-label">Interessi totali pagati</span>
+            <span class="ect-val" style="color:var(--warning)">${fmt(totaleInteressi)}</span>
+          </div>
+          <div class="ect-metric ect-total">
+            <span class="ect-label">Totale restituito in ${duration} anni</span>
+            <span class="ect-val" style="color:var(--danger)">${fmt(costoTotale)}</span>
+          </div>
+        </div>
+        <p class="ect-note">Paghi <strong>${fmt(totaleInteressi)}</strong> di interessi — cioè il <strong>${(totaleInteressi / amount * 100).toFixed(0)}%</strong> in più rispetto a quanto hai ricevuto.</p>
+      </div>`;
+
     document.getElementById('evalResult').style.display = 'block';
     document.getElementById('evalResult').innerHTML = `
       <div style="border-left:3px solid ${statusColor[overallStatus]}; background:var(--bg-card); border:1px solid var(--border); padding:16px 20px; margin-bottom:12px">
         <strong style="font-size:1rem; display:block; margin-bottom:4px">${overallLabel[overallStatus]}</strong>
         <span style="color:var(--muted); font-size:0.82rem">Tipo: ${rateType} | Durata: ${duration} anni | TAEG dichiarato: ${taeg || '—'}%</span>
       </div>
+      ${costoBlock}
       ${indicators.map(ind => `
         <div class="eval-indicator" style="border-left:3px solid ${statusColor[ind.status]}">
           <div class="ei-header">
@@ -1063,6 +1336,6 @@ const app = (() => {
   }
 
   // ── Public API ──
-  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToSimulation, updateSavings, showStep, requestAIAnalysis, restart, goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI };
+  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToSimulation, updateSavings, fillAverageValues, showStep, requestAIAnalysis, restart, goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI, requestExpenseAI };
 
 })();
