@@ -168,15 +168,24 @@ function buildMortgagePrompt(d) {
 // ── /suggest-expenses ────────────────────────────────────────
 function buildSuggestPrompt(d) {
   const filled = Object.entries(d.already_filled ?? {}).map(([k, v]) => `${k}: €${v}`).join(', ') || 'nessuno';
+
+  const ctxLines = [];
+  if (d.lifestyle_context && Object.keys(d.lifestyle_context).length) {
+    Object.entries(d.lifestyle_context).forEach(([q, a]) => ctxLines.push(`  - ${q}: ${a}`));
+  }
+  if (d.lifestyle_answers?.length) {
+    d.lifestyle_answers.forEach(({ question, answer }) => ctxLines.push(`  - ${question}: ${answer}`));
+  }
+
   return [
     `Sei un consulente finanziario italiano. Stima le spese mensili realistiche per questo utente.`,
     `Profilo: ${d.level ?? 'principiante'}, reddito €${d.income ?? 0}/mese`,
-    `Contesto vita: ${d.lifestyle_context ? JSON.stringify(d.lifestyle_context) : '—'}`,
-    `Valori gia' inseriti (NON modificare): ${filled}`,
+    ctxLines.length ? `Risposte dal quiz:\n${ctxLines.join('\n')}` : '',
+    `Valori gia' inseriti dall'utente (NON modificare): ${filled}`,
     ``,
     `Rispondi SOLO con JSON valido, senza testo aggiuntivo:`,
     `{"affitto":0,"spesa":0,"ristoranti":0,"trasporti":0,"bollette":0,"abbonamenti":0,"shopping":0,"salute":0,"svago":0,"altro":0}`,
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 // ── Routes ────────────────────────────────────────────────────

@@ -780,15 +780,30 @@ const app = (() => {
     });
     const income = parseFloat(document.getElementById('incomeInput').value) || 0;
 
+    // Estrae il contesto quiz direttamente da state.answers (computeScores non è ancora stato chiamato)
+    const quizContext = {};
+    const lifestyleAnswers = [];
+    let ks = 0, ls = 0;
+    QUIZ.forEach((q, i) => {
+      const ans = state.answers[i];
+      if (ans === null || ans === undefined) return;
+      if (q.type === 'lifestyle_context') quizContext[q.text] = q.options[ans];
+      if (q.type === 'lifestyle')         { lifestyleAnswers.push({ question: q.text, answer: q.options[ans] }); ls += (q.scores?.[ans] ?? 0); }
+      if (q.type === 'knowledge' && ans === q.correct) ks++;
+    });
+    const total = ks + ls;
+    const currentLevel = total >= 10 ? 'esperto' : total >= 6 ? 'intermedio' : 'principiante';
+
     try {
       const res = await fetch(`${SERVER}/suggest-expenses`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          level:             state.level,
+          level:              currentLevel,
           income,
-          lifestyle_context: state.lifestyleContext,
-          already_filled:    alreadyFilled,
+          lifestyle_context:  quizContext,
+          lifestyle_answers:  lifestyleAnswers,
+          already_filled:     alreadyFilled,
         }),
       });
 
