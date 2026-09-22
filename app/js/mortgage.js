@@ -6,7 +6,7 @@
 import { showStep } from './navigation.js';
 import { state } from './state.js';
 import { MARKET_RATES } from './market-rates.js';
-import { MORTGAGE_DURATIONS } from './constants.js';
+import { MORTGAGE_DURATIONS, MORTGAGE_IMPROVEMENT_ACTIONS } from './constants.js';
 import { monthlySavings, calcolaRata, calcolaImportoMax, fmt } from './utils.js';
 import { SERVER } from './ai.js';
 
@@ -57,7 +57,42 @@ export function renderMortgage() {
     </div>
     <p class="mt-note">${liveTag} Calcolato con tasso fisso ${MARKET_RATES.fisso}% · variabile ${MARKET_RATES.variabile}%${MARKET_RATES.inflazione ? ' · inflazione ' + MARKET_RATES.inflazione + '%' : ''}. Il TAEG effettivo varia per banca.</p>`;
 
+  renderMortgageActions(status, surplus);
   updateMortgageSim();
+}
+
+function renderMortgageActions(status, surplus) {
+  const el = document.getElementById('mortgageActionsSection');
+  if (!el) return;
+
+  if (status === 'ok') {
+    el.innerHTML = '';
+    return;
+  }
+
+  const actions = MORTGAGE_IMPROVEMENT_ACTIONS[status] || [];
+  const heading = status === 'danger'
+    ? '🎯 Come migliorare la tua situazione prima del mutuo'
+    : '🎯 Piccoli aggiustamenti per essere pronti';
+  const intro = status === 'danger'
+    ? 'Al momento il tuo margine mensile non è ancora sufficiente per sostenere una rata. Ecco i passi concreti per cambiare la situazione.'
+    : `Ci sei quasi — con qualche ottimizzazione arrivi alla soglia di sostenibilità. Il tuo surplus attuale è ${fmt(Math.max(0, surplus))}/mese.`;
+
+  el.innerHTML = `
+    <div class="action-section mortgage-actions-section">
+      <h3>${heading}</h3>
+      <p class="action-intro">${intro}</p>
+      <div class="action-list">
+        ${actions.map((a, i) => `
+          <div class="action-item">
+            <div class="action-num">${i + 1}</div>
+            <div class="action-text">
+              <strong>${a.title}</strong>
+              <span>${a.text}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
 }
 
 /**

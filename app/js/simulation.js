@@ -7,6 +7,7 @@ import { showStep } from './navigation.js';
 import { state } from './state.js';
 import { TIPS, ACTIONS } from './constants.js';
 import { monthlySavings, compoundGrowth, fmt } from './utils.js';
+import { SERVER } from './ai.js';
 
 /**
  * Naviga allo step simulazione e renderizza il contenuto.
@@ -80,27 +81,29 @@ export function renderSimulation() {
     <div class="legend-item"><div class="legend-dot" style="background:#DC2626"></div>Potere d'acquisto reale: quanto valgono i risparmi dopo l'inflazione al 2%</div>`;
 
   renderTips();
-  renderActions(savings);
 }
+
+const _tipDetailCache = {};
 
 /**
  * Renderizza le card educative sui concetti finanziari, calibrate per il livello utente.
+ * Ogni card è cliccabile per espandere un approfondimento AI.
  */
 export function renderTips() {
   const level = state.level || 'principiante';
   const introText = {
-    principiante: "Ecco i 5 concetti fondamentali della finanza personale, spiegati in parole semplici. Capirli ti aiuterà a prendere decisioni migliori con i tuoi soldi.",
-    intermedio: "I concetti chiave con qualche dettaglio in più — le sfumature che ti aiutano a ottimizzare le tue scelte finanziarie.",
-    esperto: "Una sintesi tecnica con focus sulle implicazioni pratiche per la tua strategia finanziaria."
+    principiante: "Clicca su un concetto per un approfondimento personalizzato — spiegato in parole semplici, con esempi dalla tua situazione.",
+    intermedio: "Clicca su un concetto per un approfondimento AI adattato al tuo profilo e ai tuoi numeri.",
+    esperto: "Clicca su un concetto per un'analisi tecnica approfondita con implicazioni pratiche per la tua strategia."
   };
   document.getElementById('tipsIntro').textContent = introText[level];
 
   const grid = document.getElementById('tipsGrid');
   grid.innerHTML = '';
-  Object.values(TIPS).forEach(tip => {
+  Object.entries(TIPS).forEach(([key, tip]) => {
     const content = tip[level];
     const card = document.createElement('div');
-    card.className = 'tip-card';
+    card.className = 'tip-card tip-card--clickable';
     card.style.borderLeftColor = tip.color;
     card.innerHTML = `
       <div class="tip-header">
@@ -108,9 +111,60 @@ export function renderTips() {
         <span class="tip-tag" style="background:${tip.color}20;color:${tip.color}">${level}</span>
       </div>
       <p class="tip-simple">${content.simple}</p>
-      <div class="tip-example">${content.example}</div>`;
+      <div class="tip-example">${content.example}</div>
+      <div class="tip-detail" id="tip-detail-${key}" style="display:none">
+        <div class="tip-detail-body" id="tip-detail-body-${key}"></div>
+      </div>
+      <div class="tip-expand-strip" id="tip-strip-${key}">✨ Approfondisci con AI</div>`;
+    card.addEventListener('click', () => expandTip(key, tip, card));
     grid.appendChild(card);
   });
+}
+
+async function expandTip(key, tip, card) {
+  const detailEl = document.getElementById(`tip-detail-${key}`);
+  const bodyEl   = document.getElementById(`tip-detail-body-${key}`);
+  const stripEl  = document.getElementById(`tip-strip-${key}`);
+
+  if (detailEl.style.display !== 'none') {
+    detailEl.style.display = 'none';
+    if (stripEl) stripEl.textContent = '✨ Approfondisci con AI';
+    card.classList.remove('tip-card--open');
+    return;
+  }
+
+  detailEl.style.display = 'block';
+  if (stripEl) stripEl.textContent = '▲ Chiudi';
+  card.classList.add('tip-card--open');
+
+  if (_tipDetailCache[key]) {
+    bodyEl.textContent = _tipDetailCache[key];
+    return;
+  }
+
+  bodyEl.innerHTML = '<span style="color:var(--muted);font-size:0.85rem">⏳ Caricamento approfondimento…</span>';
+
+  try {
+    const res = await fetch(`${SERVER}/tip-detail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic:      key,
+        title:      tip.title,
+        level:      state.level || 'principiante',
+        income:     state.income || 0,
+        savings:    monthlySavings(),
+        weak_areas: state.weakAreas || [],
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const text = data.detail || data.analysis || '—';
+    _tipDetailCache[key] = text;
+    bodyEl.textContent = text;
+  } catch {
+    bodyEl.innerHTML = '<span style="color:var(--muted);font-size:0.85rem">Server non disponibile. Avvia il server locale per gli approfondimenti AI.</span>';
+  }
 }
 
 /**

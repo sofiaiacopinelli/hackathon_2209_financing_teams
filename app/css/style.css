@@ -336,7 +336,7 @@ body {
 .expense-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .expense-card-icon { font-size: 1.2rem; }
 .expense-card-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
-.expense-card-note { font-size: 0.74rem; color: var(--accent); margin: 6px 0 0; line-height: 1.4; }
+.expense-card-note { font-size: 0.74rem; color: var(--acc-purple-mid); margin: 6px 0 0; line-height: 1.4; }
 
 .expense-input-wrap { display: flex; align-items: center; border: 1px solid var(--border-hi); background: var(--bg-card2); }
 .expense-prefix { padding: 6px 8px; background: var(--bg-card3); color: var(--muted); font-size: 0.8rem; font-weight: 700; border-right: 1px solid var(--border-hi); }
@@ -417,18 +417,24 @@ body {
   padding: 18px 20px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.tip-card--clickable .tip-header { cursor: pointer; }
-.tip-card--clickable .tip-header:hover .tip-expand-hint { opacity: 1; }
+.tip-card--clickable { cursor: pointer; }
+.tip-card--clickable:hover { border-color: var(--acc-purple); }
 .tip-card--open {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent)20;
+  border-color: var(--acc-purple);
+  box-shadow: 0 0 0 1px var(--acc-purple-line);
 }
 .tip-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .tip-title { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.tip-expand-hint {
-  font-size: 0.72rem; color: var(--accent); font-weight: 600;
-  opacity: 0.6; transition: opacity 0.15s; white-space: nowrap;
+.tip-expand-strip {
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 12px; padding: 7px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem; font-weight: 600; color: var(--acc-purple-mid);
+  gap: 5px; letter-spacing: 0.02em;
+  transition: background 0.15s;
 }
+.tip-card--clickable:hover .tip-expand-strip { background: var(--acc-purple-dim); }
+.tip-card--open .tip-expand-strip { border-top-color: var(--acc-purple-line); }
 .tip-tag {
   font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
   border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;
@@ -459,7 +465,9 @@ body {
    ACTIONS
    ============================================================ */
 .action-section { margin-bottom: 32px; }
-.action-section h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 14px; letter-spacing: 0.02em; }
+.action-section h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.02em; }
+.action-intro { font-size: 0.88rem; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+.mortgage-actions-section { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
 .action-list { display: flex; flex-direction: column; gap: 8px; }
 .action-item {
   display: flex; align-items: flex-start; gap: 14px;
@@ -533,7 +541,7 @@ body {
 .opt-cmp-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 10px; }
 .opt-cmp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .opt-cmp-tag { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; white-space: nowrap; min-width: 52px; text-align: center; }
-.opt-cmp-tag--you  { background: var(--accent)20; color: var(--accent); }
+.opt-cmp-tag--you  { background: var(--acc-purple-dim); color: var(--acc-purple-mid); }
 .opt-cmp-tag--avg  { background: var(--muted)20;  color: var(--muted); }
 .opt-bar-bg { flex: 1; height: 5px; background: var(--bg-card3); border-radius: 3px; overflow: hidden; }
 .opt-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
@@ -549,7 +557,7 @@ body {
 .opt-table-head { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); background: var(--bg-card2); border-bottom: 1px solid var(--border); }
 .opt-row { border-bottom: 1px solid var(--border); color: var(--muted); }
 .opt-row:last-of-type { border-bottom: none; }
-.opt-row--best { background: var(--accent)08; color: var(--text); font-weight: 600; }
+.opt-row--best { background: var(--acc-purple-dim); color: var(--text); font-weight: 600; }
 .opt-anni { font-weight: 700; color: var(--text); }
 .opt-importo { font-weight: 700; }
 .opt-table-note { font-size: 0.72rem; color: var(--muted); padding: 8px 14px; border-top: 1px solid var(--border); background: var(--bg-card2); font-style: italic; }

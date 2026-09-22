@@ -371,6 +371,26 @@ export const ACTIONS = {
 };
 
 /**
+ * Azioni di miglioramento finanziario da mostrare nel tab mutuo
+ * quando la situazione è warning o danger.
+ * @type {Object.<'warning'|'danger', Array<{title: string, text: string}>>}
+ */
+export const MORTGAGE_IMPROVEMENT_ACTIONS = {
+  danger: [
+    { title: '📉 Riduci le spese non essenziali', text: 'Il tuo surplus mensile è troppo basso per sostenere una rata. Punta a liberare almeno il 25-30% del reddito: ristoranti, abbonamenti e shopping sono i fronti più facili.' },
+    { title: '💳 Estingui i debiti in corso', text: 'Prestiti e carte rateali riducono la capacità di credito e il cashflow. Estinguerli prima di richiedere un mutuo migliora il profilo creditizio e libera liquidità per la rata.' },
+    { title: '🏦 Inizia ad accumulare l\'anticipo', text: 'Le banche richiedono tipicamente il 20-25% del valore dell\'immobile come anticipo. Ogni euro accantonato ora riduce l\'importo del mutuo — e la rata mensile.' },
+    { title: '📈 Valuta come aumentare le entrate', text: 'Ogni 100€/mese in più di reddito netto equivale a circa 25.000€ di mutuo accessibile in più. Formazione, cambio ruolo o attività extra possono fare la differenza in 1-2 anni.' },
+  ],
+  warning: [
+    { title: '📊 Ottimizza 2-3 spese fisse', text: 'Sei vicino alla soglia. Rinegoziare utenze, assicurazioni o abbonamenti per 150-200€/mese può spostarti dalla zona "attenzione" a quella "ok" senza stravolgere lo stile di vita.' },
+    { title: '💰 Punta a un anticipo più alto', text: 'Aumentare l\'anticipo abbassa l\'importo del mutuo e riduce la rata. Con un LTV sotto l\'80% ottieni anche condizioni di tasso migliori dalle banche.' },
+    { title: '⏳ Un piano da 12-18 mesi', text: 'Con piccoli aggiustamenti e un risparmio mirato, in 12-18 mesi la tua situazione può passare da "attenzione" a "favorevole". Calcola un target mensile e automatizza il versamento.' },
+    { title: '🔍 Confronta almeno 3 banche', text: 'Mezzo punto di differenza sul tasso vale migliaia di euro in 25 anni. Usa un broker indipendente o chiedi preventivi a più istituti prima di firmare qualsiasi cosa.' },
+  ],
+};
+
+/**
  * Medie ISTAT approssimate per spese mensili di un single/coppia in Italia (in euro).
  * @type {Object.<string, number>}
  */
