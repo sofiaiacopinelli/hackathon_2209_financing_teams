@@ -70,6 +70,17 @@ export function registerRoutes(app) {
     }
   });
 
+  app.post('/mortgage-coach', async (req, res) => {
+    console.log(`\n[/mortgage-coach] status="${req.body.status}" level="${req.body.level}"`);
+    try {
+      const advice = await dispatch('mortgage-coach', req.body);
+      res.json({ ok: true, advice });
+    } catch (err) {
+      console.error('[/mortgage-coach] errore:', err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   app.post('/tip-detail', async (req, res) => {
     console.log(`\n[/tip-detail] topic="${req.body.topic}" level="${req.body.level}"`);
     try {

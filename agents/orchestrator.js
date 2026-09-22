@@ -16,7 +16,8 @@ import * as analyzer      from './financial-analyzer.js';
 import * as mortgage      from './mortgage-advisor.js';
 import * as expenses      from './expense-suggester.js';
 import * as quiz          from './quiz-tutor.js';
-import * as tipExplainer  from './tip-explainer.js';
+import * as tipExplainer   from './tip-explainer.js';
+import * as mortgageCoach  from './mortgage-coach.js';
 
 // Mappa dei task type agli agenti disponibili
 const AGENTS = {
@@ -25,6 +26,7 @@ const AGENTS = {
   'suggest-expenses': expenses,
   'quiz-feedback':    quiz,
   'tip-detail':       tipExplainer,
+  'mortgage-coach':   mortgageCoach,
 };
 
 // Descrizioni degli agenti per il prompt di routing automatico

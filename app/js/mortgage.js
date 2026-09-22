@@ -85,7 +85,7 @@ export function renderMortgage() {
   updateMortgageSim();
 }
 
-function renderMortgageActions(status, surplus) {
+async function renderMortgageActions(status, surplus) {
   const el = document.getElementById('mortgageActionsSection');
   if (!el) return;
 
@@ -94,29 +94,85 @@ function renderMortgageActions(status, surplus) {
     return;
   }
 
-  const actions = MORTGAGE_IMPROVEMENT_ACTIONS[status] || [];
   const heading = status === 'danger'
     ? '🎯 Come migliorare la tua situazione prima del mutuo'
     : '🎯 Piccoli aggiustamenti per essere pronti';
-  const intro = status === 'danger'
-    ? 'Al momento il tuo margine mensile non è ancora sufficiente per sostenere una rata. Ecco i passi concreti per cambiare la situazione.'
-    : `Ci sei quasi — con qualche ottimizzazione arrivi alla soglia di sostenibilità. Il tuo surplus attuale è ${fmt(Math.max(0, surplus))}/mese.`;
 
+  // Mostra loading state
   el.innerHTML = `
     <div class="action-section mortgage-actions-section">
       <h3>${heading}</h3>
-      <p class="action-intro">${intro}</p>
-      <div class="action-list">
-        ${actions.map((a, i) => `
-          <div class="action-item">
-            <div class="action-num">${i + 1}</div>
-            <div class="action-text">
-              <strong>${a.title}</strong>
-              <span>${a.text}</span>
-            </div>
-          </div>`).join('')}
+      <div class="ai-loading-state">
+        <span class="ai-loading-dot"></span>
+        <span style="color:var(--muted);font-size:0.88rem">Claude analizza la tua situazione…</span>
       </div>
     </div>`;
+
+  try {
+    const res = await fetch(`${SERVER}/mortgage-coach`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status,
+        level:           state.level || 'principiante',
+        income:          state.income || 0,
+        monthly_savings: surplus,
+        expenses:        state.expenses || {},
+        knowledge_score: state.knowledgeScore || 0,
+        lifestyle_score: state.lifestyleScore || 0,
+        market_rates:    MARKET_RATES.live
+          ? { fisso: MARKET_RATES.fisso, variabile: MARKET_RATES.variabile }
+          : null,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const text = data.advice || '';
+
+    // Renderizza la risposta AI come testo strutturato
+    el.innerHTML = `
+      <div class="action-section mortgage-actions-section">
+        <h3>${heading}</h3>
+        <div class="mortgage-coach-output">${formatMortgageCoachOutput(text)}</div>
+      </div>`;
+  } catch {
+    // Fallback ai contenuti statici se il server non è disponibile
+    const actions = MORTGAGE_IMPROVEMENT_ACTIONS[status] || [];
+    el.innerHTML = `
+      <div class="action-section mortgage-actions-section">
+        <h3>${heading}</h3>
+        <div class="action-list">
+          ${actions.map((a, i) => `
+            <div class="action-item">
+              <div class="action-num">${i + 1}</div>
+              <div class="action-text">
+                <strong>${a.title}</strong>
+                <span>${a.text}</span>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+}
+
+function formatMortgageCoachOutput(text) {
+  // Converte il formato **N. Titolo**\nTesto in action-item card
+  const blocks = text.split(/\n\s*\n/).filter(b => b.trim());
+  const items = blocks.map((block, i) => {
+    const lines = block.trim().split('\n');
+    const titleLine = lines[0].replace(/^\*\*\d+\.\s*/, '').replace(/\*\*$/, '').trim();
+    const body = lines.slice(1).join(' ').trim();
+    return `
+      <div class="action-item">
+        <div class="action-num">${i + 1}</div>
+        <div class="action-text">
+          <strong>${titleLine}</strong>
+          ${body ? `<span>${body}</span>` : ''}
+        </div>
+      </div>`;
+  });
+  return `<div class="action-list">${items.join('')}</div>`;
 }
 
 /**

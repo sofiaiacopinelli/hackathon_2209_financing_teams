@@ -470,6 +470,21 @@ body {
 .action-section h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.02em; }
 .action-intro { font-size: 0.88rem; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
 .mortgage-actions-section { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
+.mortgage-coach-output { margin-top: 4px; }
+
+.ai-loading-state {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 0;
+}
+.ai-loading-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--acc-purple);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.2); }
+}
 .action-list { display: flex; flex-direction: column; gap: 8px; }
 .action-item {
   display: flex; align-items: flex-start; gap: 14px;

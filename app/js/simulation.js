@@ -149,12 +149,15 @@ async function expandTip(key, tip, card) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        topic:      key,
-        title:      tip.title,
-        level:      state.level || 'principiante',
-        income:     state.income || 0,
-        savings:    monthlySavings(),
-        weak_areas: state.weakAreas || [],
+        topic:           key,
+        title:           tip.title,
+        level:           state.level || 'principiante',
+        income:          state.income || 0,
+        savings:         monthlySavings(),
+        expenses:        state.expenses || {},
+        knowledge_score: state.knowledgeScore || 0,
+        lifestyle_score: state.lifestyleScore || 0,
+        weak_areas:      state.weakAreas || [],
       }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
