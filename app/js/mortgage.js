@@ -1,0 +1,286 @@
+/**
+ * @module mortgage
+ * Gestione dello step mutuo: affordability, simulatore interattivo e valutazione preventivo.
+ */
+
+import { showStep } from './navigation.js';
+import { state } from './state.js';
+import { MARKET_RATES } from './market-rates.js';
+import { MORTGAGE_DURATIONS } from './constants.js';
+import { monthlySavings, calcolaRata, calcolaImportoMax, fmt } from './utils.js';
+import { SERVER } from './ai.js';
+
+/**
+ * Naviga allo step mutuo e renderizza la scheda di affordability.
+ */
+export function goToMortgage() {
+  renderMortgage();
+  showStep('mortgage');
+}
+
+/**
+ * Renderizza la scheda di affordability mutuo:
+ * indicatore di sostenibilità, tabella importi/rate per durata e nota sui tassi.
+ * Avvia anche la simulazione interattiva.
+ */
+export function renderMortgage() {
+  const surplus = monthlySavings();
+  const rataMax30    = state.income * 0.30;
+  const rataMaxReale = Math.max(0, surplus * 0.50);
+  const rataPct      = state.income > 0 ? (rataMaxReale / state.income * 100) : 0;
+  const status       = rataPct >= 20 ? 'ok' : rataPct >= 10 ? 'warning' : 'danger';
+  const statusLabel  = {
+    ok:      '✅ Situazione favorevole per un mutuo',
+    warning: '⚠️ Margine limitato — valuta con attenzione',
+    danger:  '❌ Da rafforzare prima di accendere un mutuo'
+  };
+
+  const liveTag = MARKET_RATES.live
+    ? `<span class="market-live-badge" title="${state.marketDataSummary}">📡 Dati live BCE${MARKET_RATES.dateRef ? ' · ' + MARKET_RATES.dateRef : ''}</span>`
+    : `<span class="market-live-badge market-live-badge--fallback">📋 Dati stimati</span>`;
+
+  document.getElementById('mortgageResultCard').innerHTML = `
+    <div class="mortgage-status ${status}">
+      <div class="ms-icon">${status === 'ok' ? '🏠' : status === 'warning' ? '⚠️' : '🔴'}</div>
+      <div class="ms-body">
+        <strong>${statusLabel[status]}</strong>
+        <span>Rata max realistica: <b>${fmt(rataMaxReale)}/mese</b> &nbsp;|&nbsp; Soglia del 30%: ${fmt(rataMax30)}/mese</span>
+      </div>
+    </div>
+    <div class="mortgage-table">
+      <div class="mt-row header"><span>Durata</span><span>Importo max</span><span>Rata stimata</span></div>
+      ${MORTGAGE_DURATIONS.map(d => {
+        const imp  = calcolaImportoMax(rataMaxReale, MARKET_RATES.fisso, d);
+        const rata = calcolaRata(imp, MARKET_RATES.fisso, d);
+        return `<div class="mt-row"><span>${d} anni</span><span class="mt-amount">${fmt(imp)}</span><span class="mt-rata">${fmt(rata)}/mese</span></div>`;
+      }).join('')}
+    </div>
+    <p class="mt-note">${liveTag} Calcolato con tasso fisso ${MARKET_RATES.fisso}% · variabile ${MARKET_RATES.variabile}%${MARKET_RATES.inflazione ? ' · inflazione ' + MARKET_RATES.inflazione + '%' : ''}. Il TAEG effettivo varia per banca.</p>`;
+
+  updateMortgageSim();
+}
+
+/**
+ * Aggiorna il simulatore mutuo interattivo in base ai valori correnti degli slider.
+ * Mostra rata, costo totale, incidenza sul reddito e stress test dei tassi.
+ */
+export function updateMortgageSim() {
+  const amount   = parseFloat(document.getElementById('simAmount').value);
+  const duration = parseFloat(document.getElementById('simDuration').value);
+  const rate     = parseFloat(document.getElementById('simRate').value);
+
+  document.getElementById('simAmountLabel').textContent   = fmt(amount);
+  document.getElementById('simDurationLabel').textContent = duration + ' anni';
+  document.getElementById('simRateLabel').textContent     = rate.toFixed(1) + '%';
+
+  const rata           = calcolaRata(amount, rate, duration);
+  const totale         = rata * duration * 12;
+  const interessi      = totale - amount;
+  const rataVsReddito  = state.income > 0 ? (rata / state.income * 100).toFixed(1) : null;
+  const sostenibile    = state.income > 0 && rata <= state.income * 0.30;
+
+  // Stress test: rata se il tasso sale di +1% e +2%
+  const rataStress1 = calcolaRata(amount, rate + 1, duration);
+  const rataStress2 = calcolaRata(amount, rate + 2, duration);
+  const stress1Pct  = state.income > 0 ? (rataStress1 / state.income * 100).toFixed(1) : null;
+  const stress2Pct  = state.income > 0 ? (rataStress2 / state.income * 100).toFixed(1) : null;
+  const stressBlock = rate < 8 ? `
+    <div class="stress-test">
+      <div class="stress-title">📊 Stress test tasso</div>
+      <div class="stress-row">
+        <span>Tasso attuale <strong>${rate.toFixed(1)}%</strong></span>
+        <span style="color:${sostenibile ? 'var(--success)' : 'var(--danger)'}">${fmt(rata)}/mese${rataVsReddito ? ' · ' + rataVsReddito + '% reddito' : ''}</span>
+      </div>
+      ${rate + 1 <= 8 ? `<div class="stress-row">
+        <span>Se sale a <strong>${(rate + 1).toFixed(1)}%</strong></span>
+        <span style="color:${stress1Pct && stress1Pct < 30 ? 'var(--warning)' : 'var(--danger)'}">${fmt(rataStress1)}/mese${stress1Pct ? ' · +' + fmt(rataStress1 - rata) : ''}</span>
+      </div>` : ''}
+      ${rate + 2 <= 8 ? `<div class="stress-row">
+        <span>Se sale a <strong>${(rate + 2).toFixed(1)}%</strong></span>
+        <span style="color:var(--danger)">${fmt(rataStress2)}/mese${stress2Pct ? ' · +' + fmt(rataStress2 - rata) : ''}</span>
+      </div>` : ''}
+    </div>` : '';
+
+  document.getElementById('simResult').innerHTML = `
+    <div class="sim-metrics">
+      <div class="sim-metric"><span class="sm-label">Rata mensile</span><span class="sm-val" style="color:${sostenibile ? 'var(--success)' : 'var(--danger)'}">${fmt(rata)}</span></div>
+      <div class="sim-metric"><span class="sm-label">% del tuo reddito</span><span class="sm-val" style="color:${sostenibile ? 'var(--success)' : 'var(--danger)'}">${rataVsReddito ? rataVsReddito + '%' : '—'}</span></div>
+      <div class="sim-metric"><span class="sm-label">Totale restituito</span><span class="sm-val">${fmt(totale)}</span></div>
+      <div class="sim-metric"><span class="sm-label">Di cui interessi</span><span class="sm-val" style="color:var(--warning)">${fmt(interessi)}</span></div>
+    </div>
+    <div style="background:${sostenibile ? 'var(--success-dim)' : 'var(--danger-dim)'}; border-left:3px solid ${sostenibile ? 'var(--success)' : 'var(--danger)'}; padding:12px 16px; margin-top:12px; font-size:0.88rem; color:var(--text)">
+      ${sostenibile ? '✅ Questa rata è sostenibile (< 30% del reddito)' : '⚠️ Questa rata supera il 30% del reddito — rischio elevato'}
+    </div>
+    ${MARKET_RATES.live ? `<p style="font-size:0.78rem;color:var(--muted);margin-top:8px">📡 Tasso di riferimento aggiornato da BCE${MARKET_RATES.dateRef ? ' · ' + MARKET_RATES.dateRef : ''}</p>` : ''}
+    ${stressBlock}`;
+}
+
+/**
+ * Valuta un preventivo mutuo inserito dall'utente: calcola LTV, sostenibilità rata,
+ * confronto con i tassi di mercato e costo totale del finanziamento.
+ * Mostra il banner AI per l'analisi approfondita via Claude.
+ */
+export function runEvaluation() {
+  const amount    = parseFloat(document.getElementById('evalAmount').value) || 0;
+  const propValue = parseFloat(document.getElementById('evalPropertyValue').value) || 0;
+  const duration  = parseFloat(document.getElementById('evalDuration').value) || 0;
+  const rate      = parseFloat(document.getElementById('evalRate').value) || 0;
+  const taeg      = parseFloat(document.getElementById('evalTAEG').value) || 0;
+  const rata      = parseFloat(document.getElementById('evalRata').value) || 0;
+  const fees      = parseFloat(document.getElementById('evalFees').value) || 0;
+  const rateType  = document.getElementById('evalRateType').value;
+
+  if (!amount || !duration || !rate) return;
+
+  const ltv           = propValue > 0 ? (amount / propValue * 100).toFixed(1) : null;
+  const rataVsReddito = state.income > 0 && rata > 0 ? (rata / state.income * 100).toFixed(1) : null;
+
+  const statusColor = { ok: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)', neutral: '#555' };
+
+  const indicators = [
+    {
+      label: 'Sostenibilità rata',
+      value: rataVsReddito ? rataVsReddito + '% del reddito' : 'Completa il quiz con il tuo reddito',
+      status: !rataVsReddito ? 'neutral' : rataVsReddito < 30 ? 'ok' : rataVsReddito < 40 ? 'warning' : 'danger',
+      detail: !rataVsReddito
+        ? 'Inserisci il reddito nel quiz per vedere questo indicatore'
+        : rataVsReddito < 30
+          ? 'Ottimo: sotto la soglia del 30%'
+          : rataVsReddito < 40
+            ? 'Attenzione: tra 30% e 40%, gestibile ma limitante'
+            : 'Pericoloso: supera il 40% del reddito'
+    },
+    {
+      label: 'LTV (Loan To Value)',
+      value: ltv ? ltv + '%' : 'Inserisci il valore dell\'immobile',
+      status: !ltv ? 'neutral' : ltv < 80 ? 'ok' : ltv < 90 ? 'warning' : 'danger',
+      detail: !ltv
+        ? 'Inserisci il valore dell\'immobile per calcolare l\'LTV'
+        : ltv < 80
+          ? 'Buono: LTV sotto l\'80%, condizioni più favorevoli'
+          : ltv < 90
+            ? 'Nella media: alcune banche richiedono assicurazione'
+            : 'Alto: difficoltà di approvazione, tassi più alti'
+    },
+    {
+      label: 'Competitività tasso vs mercato',
+      value: rate.toFixed(2) + '% (benchmark' + (MARKET_RATES.live ? ' live' : '') + ': ' + MARKET_RATES.fisso + '%)',
+      status: rate <= MARKET_RATES.fisso ? 'ok' : rate <= MARKET_RATES.fisso + 0.5 ? 'warning' : 'danger',
+      detail: (rate <= MARKET_RATES.fisso
+        ? 'Ottimo: in linea o sotto la media di mercato'
+        : rate <= MARKET_RATES.fisso + 0.5
+          ? 'Leggermente sopra la media — prova a negoziare'
+          : 'Sopra la media di mercato — confronta altri istituti')
+        + (MARKET_RATES.live ? ` (dati BCE${MARKET_RATES.dateRef ? ' · ' + MARKET_RATES.dateRef : ''})` : ' (dati stimati)')
+    }
+  ];
+
+  const overallStatus = indicators.some(i => i.status === 'danger')  ? 'danger'  :
+                        indicators.some(i => i.status === 'warning') ? 'warning' : 'ok';
+  const overallLabel = {
+    ok:      '✅ Preventivo complessivamente buono',
+    warning: '⚠️ Preventivo accettabile con riserve',
+    danger:  '❌ Preventivo da rivedere o negoziare'
+  };
+
+  // Costo totale del mutuo
+  const rataCalcolata  = rata > 0 ? rata : calcolaRata(amount, rate, duration);
+  const costoTotale    = rataCalcolata * 12 * duration;
+  const totaleInteressi = costoTotale - amount;
+  const costoBlock = `
+    <div class="eval-costo-totale">
+      <div class="ect-title">💸 Quanto ti costa davvero questo mutuo</div>
+      <div class="ect-metrics">
+        <div class="ect-metric">
+          <span class="ect-label">Importo finanziato</span>
+          <span class="ect-val">${fmt(amount)}</span>
+        </div>
+        <div class="ect-metric">
+          <span class="ect-label">Interessi totali pagati</span>
+          <span class="ect-val" style="color:var(--warning)">${fmt(totaleInteressi)}</span>
+        </div>
+        <div class="ect-metric ect-total">
+          <span class="ect-label">Totale restituito in ${duration} anni</span>
+          <span class="ect-val" style="color:var(--danger)">${fmt(costoTotale)}</span>
+        </div>
+      </div>
+      <p class="ect-note">Paghi <strong>${fmt(totaleInteressi)}</strong> di interessi — cioè il <strong>${(totaleInteressi / amount * 100).toFixed(0)}%</strong> in più rispetto a quanto hai ricevuto.</p>
+    </div>`;
+
+  document.getElementById('evalResult').style.display = 'block';
+  document.getElementById('evalResult').innerHTML = `
+    <div style="border-left:3px solid ${statusColor[overallStatus]}; background:var(--bg-card); border:1px solid var(--border); padding:16px 20px; margin-bottom:12px">
+      <strong style="font-size:1rem; display:block; margin-bottom:4px">${overallLabel[overallStatus]}</strong>
+      <span style="color:var(--muted); font-size:0.82rem">Tipo: ${rateType} | Durata: ${duration} anni | TAEG dichiarato: ${taeg || '—'}%</span>
+    </div>
+    ${costoBlock}
+    ${indicators.map(ind => `
+      <div class="eval-indicator" style="border-left:3px solid ${statusColor[ind.status]}">
+        <div class="ei-header">
+          <span class="ei-label">${ind.label}</span>
+          <span class="ei-value" style="color:${statusColor[ind.status]}">${ind.value}</span>
+        </div>
+        <p class="ei-detail">${ind.detail}</p>
+      </div>`).join('')}`;
+
+  document.getElementById('evalAiBanner').style.display = 'flex';
+  state.evalData = { amount, propValue, duration, rate, taeg, rata, fees, rateType, ltv, rataVsReddito, overallStatus };
+}
+
+/**
+ * Richiede al server un'analisi AI del preventivo mutuo valutato.
+ * Usa i dati salvati in state.evalData.
+ * @returns {Promise<void>}
+ */
+export async function requestEvalAI() {
+  if (!state.evalData) return;
+
+  const btn = document.querySelector('#evalAiBanner .btn-ai');
+  btn.textContent = '⏳ Analisi in corso…';
+  btn.disabled = true;
+
+  const d = state.evalData;
+
+  try {
+    const res = await fetch(`${SERVER}/mortgage-offer`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level:            state.level,
+        income:           state.income,
+        monthly_savings:  monthlySavings(),
+        amount:           d.amount,
+        property_value:   d.propValue ?? 0,
+        duration_years:   d.duration,
+        rate:             d.rate,
+        taeg:             d.taeg ?? 0,
+        declared_payment: d.rata ?? 0,
+        fees:             d.fees ?? 0,
+        rate_type:        d.rateType ?? 'fisso',
+        market_rates:     MARKET_RATES.live
+          ? { fisso: MARKET_RATES.fisso, variabile: MARKET_RATES.variabile }
+          : null,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    document.getElementById('evalAiResultBody').textContent = data.analysis;
+    document.getElementById('evalAiResult').style.display = 'block';
+    document.getElementById('evalAiBanner').style.display = 'none';
+
+  } catch (err) {
+    const isNetwork = err.message.includes('fetch') || err.message.includes('Failed') || err.message.includes('NetworkError');
+    if (isNetwork) {
+      alert('Server non raggiungibile.\n\nAvvia il server dal terminale di Claude Code:\n  cd app/server\n  npm install\n  npm start');
+    } else {
+      alert('Errore AI: ' + err.message);
+    }
+    btn.textContent = 'Analizza con AI';
+    btn.disabled = false;
+  }
+}
