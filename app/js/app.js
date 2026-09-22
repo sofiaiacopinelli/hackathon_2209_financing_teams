@@ -1000,6 +1000,7 @@ const app = (() => {
           mortgage_context:  state.mortgageContext,
           mortgage_interest: mortgageInterest,
           market_data:       state.marketDataSummary || null,
+          market_rates:      MARKET_RATES.live ? { fisso: MARKET_RATES.fisso, variabile: MARKET_RATES.variabile } : null,
         }),
       });
 
@@ -1227,6 +1228,7 @@ const app = (() => {
           declared_payment:  d.rata ?? 0,
           fees:              d.fees ?? 0,
           rate_type:         d.rateType ?? 'fisso',
+          market_rates:      MARKET_RATES.live ? { fisso: MARKET_RATES.fisso, variabile: MARKET_RATES.variabile } : null,
         }),
       });
 

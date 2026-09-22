@@ -148,8 +148,15 @@ function getTips({ level, focus_areas }) {
 }
 
 // ── propose_mortgage ─────────────────────────────────────────
-const MARKET_RATE = 3.5;
-const DURATIONS   = [10, 15, 20, 25, 30];
+// Tassi di riferimento — aggiornabili a runtime con setMarketRates()
+let MARKET_RATE     = 3.5;
+let MARKET_RATE_VAR = 2.8;
+const DURATIONS     = [10, 15, 20, 25, 30];
+
+export function setMarketRates({ fisso, variabile } = {}) {
+  if (fisso     && typeof fisso === 'number')     MARKET_RATE     = fisso;
+  if (variabile && typeof variabile === 'number') MARKET_RATE_VAR = variabile;
+}
 
 function monthlyPayment(amount, annualRatePct, years) {
   const r = annualRatePct / 100 / 12, n = years * 12;
@@ -233,4 +240,8 @@ export function runSkill(name, input) {
   const fn = SKILLS[name];
   if (!fn) return { error: `Skill '${name}' non trovata. Disponibili: ${Object.keys(SKILLS).join(', ')}` };
   return fn(input);
+}
+
+export function listSkills() {
+  return Object.keys(SKILLS);
 }

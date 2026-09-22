@@ -18,7 +18,7 @@ import express               from 'express';
 import cors                  from 'cors';
 import { fileURLToPath }     from 'url';
 import { dirname, join }     from 'path';
-import { runSkill }          from './skills.js';
+import { runSkill, setMarketRates } from './skills.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -209,6 +209,7 @@ app.get('/health', (_req, res) => {
 
 app.post('/analyze', async (req, res) => {
   console.log('\n[/analyze] nuova richiesta');
+  if (req.body.market_rates) setMarketRates(req.body.market_rates);
   try {
     const analysis = await runAgent(SYSTEM_ANALYZE, buildAnalyzeMessage(req.body));
     res.json({ ok: true, analysis });
@@ -220,6 +221,7 @@ app.post('/analyze', async (req, res) => {
 
 app.post('/mortgage-offer', async (req, res) => {
   console.log('\n[/mortgage-offer] nuova richiesta');
+  if (req.body.market_rates) setMarketRates(req.body.market_rates);
   try {
     const analysis = await runAgent(SYSTEM_MORTGAGE, buildMortgageMessage(req.body));
     res.json({ ok: true, analysis });
