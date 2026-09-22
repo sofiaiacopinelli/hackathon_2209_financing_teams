@@ -17,12 +17,14 @@ import * as mortgage      from './mortgage-advisor.js';
 import * as expenses      from './expense-suggester.js';
 import * as quiz          from './quiz-tutor.js';
 import * as tipExplainer   from './tip-explainer.js';
-import * as mortgageCoach  from './mortgage-coach.js';
+import * as mortgageCoach      from './mortgage-coach.js';
+import * as mortgageComparator from './mortgage-comparator.js';
 
 // Mappa dei task type agli agenti disponibili
 const AGENTS = {
   'analyze':          analyzer,
   'mortgage-offer':   mortgage,
+  'mortgage-compare': mortgageComparator,
   'suggest-expenses': expenses,
   'quiz-feedback':    quiz,
   'tip-detail':       tipExplainer,

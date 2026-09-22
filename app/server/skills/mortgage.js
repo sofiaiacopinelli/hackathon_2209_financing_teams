@@ -96,6 +96,111 @@ export function proposeMortgage({ income, monthly_savings }) {
 }
 
 /**
+ * Confronta un preventivo mutuo reale con il profilo ideale calcolato per l'utente.
+ *
+ * @param {object} input
+ * @param {number} input.income            - Reddito mensile in euro.
+ * @param {number} input.monthly_savings   - Risparmio mensile netto in euro.
+ * @param {number} input.ideal_rate        - Tasso di riferimento di mercato (BCE).
+ * @param {number} input.amount            - Importo richiesto in euro.
+ * @param {number} [input.property_value]  - Valore dell'immobile in euro.
+ * @param {number} input.duration_years    - Durata in anni.
+ * @param {number} input.rate              - Tasso offerto dalla banca.
+ * @param {number} [input.taeg]            - TAEG dichiarato.
+ * @param {number} [input.declared_payment] - Rata dichiarata dalla banca.
+ * @param {number} [input.fees]            - Spese iniziali in euro.
+ * @param {string} [input.rate_type]       - Tipo tasso ('fisso' | 'variabile').
+ * @returns {{comparisons: object[], overall_status: string, ideal_rata: number, ideal_amount: number, offered_rata: number}}
+ */
+export function compareMortgageOffer({
+  income, monthly_savings, ideal_rate,
+  amount, property_value = 0, duration_years,
+  rate, taeg = 0, declared_payment = 0, fees = 0, rate_type = 'fisso',
+}) {
+  const rataMax30     = income * 0.30;
+  const rataMaxReale  = Math.max(0, (monthly_savings ?? 0) * 0.50);
+  const idealRata     = rataMaxReale > 0 ? Math.min(rataMax30, rataMaxReale) : rataMax30;
+  const idealAmount   = idealRata > 0 ? maxAmount(idealRata, ideal_rate, duration_years) : 0;
+  const computedPayment = monthlyPayment(amount, rate, duration_years);
+  const actualPayment   = declared_payment > 0 ? declared_payment : computedPayment;
+  const taegSpread      = taeg > 0 ? taeg - rate : null;
+
+  const semaphore = (val, ok, warn) =>
+    val === null ? 'neutral' : val <= ok ? 'ok' : val <= warn ? 'warning' : 'danger';
+
+  const comparisons = [
+    {
+      name:          'Rata mensile',
+      ideal_label:   `€${Math.round(idealRata).toLocaleString('it-IT')}/mese (max sostenibile)`,
+      offered_label: `€${Math.round(actualPayment).toLocaleString('it-IT')}/mese`,
+      status: semaphore(actualPayment, rataMax30, rataMax30 * 1.1),
+      note: actualPayment <= rataMaxReale
+        ? 'Dentro la tua capacità reale di risparmio'
+        : actualPayment <= rataMax30
+          ? 'Sostenibile ma al limite della soglia del 30%'
+          : 'Supera la soglia del 30% del reddito — rischio elevato',
+      ideal_num:   Math.round(idealRata),
+      offered_num: Math.round(actualPayment),
+    },
+    {
+      name:          'Tasso nominale',
+      ideal_label:   `${ideal_rate}% (benchmark BCE)`,
+      offered_label: `${rate.toFixed(2)}% (offerto dalla banca)`,
+      status: semaphore(rate, ideal_rate, ideal_rate + 0.5),
+      note: rate <= ideal_rate
+        ? 'In linea o sotto la media di mercato — ottimo'
+        : `+${(rate - ideal_rate).toFixed(2)}% rispetto al benchmark BCE${rate > ideal_rate + 0.5 ? ' — prova a negoziare' : ''}`,
+      ideal_num:   ideal_rate,
+      offered_num: rate,
+    },
+    {
+      name:          'Importo finanziato',
+      ideal_label:   idealAmount > 0 ? `€${Math.round(idealAmount).toLocaleString('it-IT')} (max calcolato per te)` : 'Non calcolabile',
+      offered_label: `€${Math.round(amount).toLocaleString('it-IT')} (richiesto)`,
+      status: idealAmount <= 0 ? 'neutral'
+        : semaphore(amount, idealAmount * 1.05, idealAmount * 1.15),
+      note: idealAmount <= 0 ? '—'
+        : amount <= idealAmount
+          ? 'Importo dentro la tua capacità massima calcolata'
+          : `€${Math.round(amount - idealAmount).toLocaleString('it-IT')} oltre l'importo ideale — verifica la sostenibilità`,
+      ideal_num:   Math.round(idealAmount),
+      offered_num: Math.round(amount),
+    },
+  ];
+
+  if (taegSpread !== null) {
+    comparisons.push({
+      name:          'Spread TAEG–Tasso',
+      ideal_label:   '< 0,30% (costi accessori contenuti)',
+      offered_label: `+${taegSpread.toFixed(2)}% (costi inclusi nel TAEG)`,
+      status: semaphore(taegSpread, 0.3, 0.7),
+      note: taegSpread < 0.3
+        ? 'Costi accessori contenuti — trasparenza buona'
+        : taegSpread < 0.7
+          ? 'TAEG sensibilmente sopra il tasso — chiedi il dettaglio delle voci'
+          : 'Spread elevato — verifica assicurazioni obbligatorie e spese incluse',
+      ideal_num:   0.3,
+      offered_num: taegSpread,
+    });
+  }
+
+  const active  = comparisons.map(c => c.status).filter(s => s !== 'neutral');
+  const overall = active.includes('danger') ? 'danger' : active.includes('warning') ? 'warning' : 'ok';
+
+  return {
+    comparisons,
+    overall_status: overall,
+    overall_label:  { ok: 'Preventivo in linea col tuo profilo', warning: 'Preventivo accettabile con riserve', danger: 'Preventivo distante dal tuo profilo ideale' }[overall],
+    ideal_rata:     Math.round(idealRata),
+    ideal_amount:   Math.round(idealAmount),
+    ideal_rate,
+    offered_rate:   rate,
+    offered_amount: amount,
+    offered_rata:   Math.round(actualPayment),
+  };
+}
+
+/**
  * Valuta un preventivo mutuo fornito dalla banca: confronta tasso, LTV e sostenibilità.
  *
  * @param {object} input

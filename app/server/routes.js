@@ -81,6 +81,17 @@ export function registerRoutes(app) {
     }
   });
 
+  app.post('/mortgage-compare', async (req, res) => {
+    console.log('\n[/mortgage-compare] richiesta ricevuta');
+    try {
+      const comparison = await dispatch('mortgage-compare', req.body);
+      res.json({ ok: true, comparison });
+    } catch (err) {
+      console.error('[/mortgage-compare] errore:', err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   app.post('/tip-detail', async (req, res) => {
     console.log(`\n[/tip-detail] topic="${req.body.topic}" level="${req.body.level}"`);
     try {

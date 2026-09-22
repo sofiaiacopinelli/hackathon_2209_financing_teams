@@ -340,6 +340,24 @@
         <div class="ai-result-body" id="evalAiResultBody"></div>
       </div>
 
+      <div class="ai-banner" id="evalCompareAiBanner" style="display:none">
+        <div class="ai-banner-left">
+          <span class="ai-icon">🔎</span>
+          <div>
+            <strong>Confronto AI con il tuo profilo ideale</strong>
+            <span>Claude confronta il preventivo con i valori calcolati per te: cosa è buono, cosa è critico, cosa negoziare</span>
+          </div>
+        </div>
+        <div class="ai-banner-right">
+          <button class="btn btn-ai" onclick="app.requestCompareAI()">Confronta con Claude →</button>
+        </div>
+      </div>
+
+      <div class="ai-result" id="evalCompareAiResult" style="display:none">
+        <div class="ai-result-header"><span>🔎</span> <strong>Confronto con il tuo profilo ideale — Claude</strong></div>
+        <div class="ai-result-body" id="evalCompareAiResultBody"></div>
+      </div>
+
       <div class="step-nav" style="margin-top:32px">
         <button class="btn btn-ghost" onclick="app.showStep('mortgage')">← Torna al mutuo</button>
         <button class="btn btn-primary" onclick="app.restart()">Ricomincia 🔄</button>

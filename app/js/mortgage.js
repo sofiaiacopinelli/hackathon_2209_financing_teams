@@ -336,6 +336,76 @@ export function runEvaluation() {
       <p class="ect-note">Paghi <strong>${fmt(totaleInteressi)}</strong> di interessi — cioè il <strong>${(totaleInteressi / amount * 100).toFixed(0)}%</strong> in più rispetto a quanto hai ricevuto.</p>
     </div>`;
 
+  // Confronto con profilo ideale (calcolato dai dati del passo mutuo)
+  const surplus        = monthlySavings();
+  const rataMax30ideal = state.income * 0.30;
+  const rataMaxReale   = Math.max(0, surplus * 0.50);
+  const idealRata      = rataMaxReale > 0 ? Math.min(rataMax30ideal, rataMaxReale) : rataMax30ideal;
+  const idealAmount    = idealRata > 0 ? calcolaImportoMax(idealRata, MARKET_RATES.fisso, duration) : 0;
+
+  const compareItems = [
+    {
+      label: 'Rata mensile',
+      ideal: `${fmt(idealRata)}/mese`,
+      offered: `${fmt(rataCalcolata)}/mese`,
+      status: rataCalcolata <= idealRata ? 'ok' : rataCalcolata <= rataMax30ideal ? 'warning' : 'danger',
+      note: rataCalcolata <= idealRata
+        ? 'Dentro la tua capacità ideale'
+        : rataCalcolata <= rataMax30ideal
+          ? 'Al limite della soglia del 30%'
+          : 'Supera la soglia del 30% del reddito',
+    },
+    {
+      label: 'Tasso nominale',
+      ideal: `${MARKET_RATES.fisso}% (BCE)`,
+      offered: `${rate.toFixed(2)}%`,
+      status: rate <= MARKET_RATES.fisso ? 'ok' : rate <= MARKET_RATES.fisso + 0.5 ? 'warning' : 'danger',
+      note: rate <= MARKET_RATES.fisso
+        ? 'In linea o sotto il benchmark BCE'
+        : `+${(rate - MARKET_RATES.fisso).toFixed(2)}% sopra il mercato`,
+    },
+    ...(idealAmount > 0 ? [{
+      label: 'Importo finanziato',
+      ideal: `${fmt(idealAmount)} (max per te)`,
+      offered: fmt(amount),
+      status: amount <= idealAmount * 1.05 ? 'ok' : amount <= idealAmount * 1.15 ? 'warning' : 'danger',
+      note: amount <= idealAmount
+        ? 'Dentro la capacità massima calcolata'
+        : `${fmt(amount - idealAmount)} oltre l'importo ideale`,
+    }] : []),
+    ...(taeg > 0 ? [{
+      label: 'Spread TAEG–Tasso',
+      ideal: '< 0,30%',
+      offered: `+${(taeg - rate).toFixed(2)}%`,
+      status: (taeg - rate) < 0.3 ? 'ok' : (taeg - rate) < 0.7 ? 'warning' : 'danger',
+      note: (taeg - rate) < 0.3
+        ? 'Costi accessori contenuti'
+        : 'TAEG distante dal tasso — chiedi dettaglio voci',
+    }] : []),
+  ];
+
+  const compareStatus = compareItems.some(i => i.status === 'danger') ? 'danger'
+    : compareItems.some(i => i.status === 'warning') ? 'warning' : 'ok';
+  const compareLabel  = { ok: '✅ Preventivo in linea col tuo profilo ideale', warning: '⚠️ Preventivo accettabile con riserve', danger: '❌ Preventivo distante dal tuo profilo ideale' }[compareStatus];
+
+  const compareBlock = `
+    <div class="eval-compare-section">
+      <div class="eval-compare-header">
+        <span class="eval-compare-title">📊 Confronto con il tuo profilo ideale</span>
+        <span class="eval-compare-badge eval-compare-badge--${compareStatus}">${compareLabel}</span>
+      </div>
+      <div class="eval-compare-table">
+        <div class="ect-row ect-row--head"><span>Indicatore</span><span>Profilo ideale</span><span>Il tuo preventivo</span><span>Esito</span></div>
+        ${compareItems.map(item => `
+          <div class="ect-row">
+            <span class="ect-label">${item.label}</span>
+            <span class="ect-ideal">${item.ideal}</span>
+            <span class="ect-offered" style="color:${statusColor[item.status]}">${item.offered}</span>
+            <span class="ect-note" style="color:${statusColor[item.status]}">${item.note}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
   document.getElementById('evalResult').style.display = 'block';
   document.getElementById('evalResult').innerHTML = `
     <div style="border-left:3px solid ${statusColor[overallStatus]}; background:var(--bg-card); border:1px solid var(--border); padding:16px 20px; margin-bottom:12px">
@@ -350,10 +420,73 @@ export function runEvaluation() {
           <span class="ei-value" style="color:${statusColor[ind.status]}">${ind.value}</span>
         </div>
         <p class="ei-detail">${ind.detail}</p>
-      </div>`).join('')}`;
+      </div>`).join('')}
+    ${compareBlock}`;
 
   document.getElementById('evalAiBanner').style.display = 'flex';
-  state.evalData = { amount, propValue, duration, rate, taeg, rata, fees, rateType, ltv, rataVsReddito, overallStatus };
+  document.getElementById('evalCompareAiBanner').style.display = 'flex';
+  document.getElementById('evalCompareAiResult').style.display = 'none';
+  state.evalData = { amount, propValue, duration, rate, taeg, rata, fees, rateType, ltv, rataVsReddito, overallStatus,
+    idealRata, idealAmount, idealRate: MARKET_RATES.fisso, monthlySavings: surplus };
+}
+
+/**
+ * Richiede a Claude un confronto tra il preventivo reale e il profilo ideale.
+ * Usa i dati salvati in state.evalData (inclusi i valori ideali calcolati).
+ * @returns {Promise<void>}
+ */
+export async function requestCompareAI() {
+  if (!state.evalData) return;
+
+  const btn = document.querySelector('#evalCompareAiBanner .btn-ai');
+  btn.textContent = '⏳ Confronto in corso…';
+  btn.disabled = true;
+
+  const d = state.evalData;
+
+  try {
+    const res = await fetch(`${SERVER}/mortgage-compare`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level:            state.level,
+        income:           state.income,
+        monthly_savings:  d.monthlySavings,
+        ideal_rate:       d.idealRate,
+        amount:           d.amount,
+        property_value:   d.propValue ?? 0,
+        duration_years:   d.duration,
+        rate:             d.rate,
+        taeg:             d.taeg ?? 0,
+        declared_payment: d.rata ?? 0,
+        fees:             d.fees ?? 0,
+        rate_type:        d.rateType ?? 'fisso',
+        market_rates:     MARKET_RATES.live
+          ? { fisso: MARKET_RATES.fisso, variabile: MARKET_RATES.variabile }
+          : null,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    document.getElementById('evalCompareAiResultBody').textContent = data.comparison;
+    document.getElementById('evalCompareAiResult').style.display = 'block';
+    document.getElementById('evalCompareAiBanner').style.display = 'none';
+
+  } catch (err) {
+    const isNetwork = err.message.includes('fetch') || err.message.includes('Failed') || err.message.includes('NetworkError');
+    if (isNetwork) {
+      alert('Server non raggiungibile.\n\nAvvia il server dal terminale:\n  npm start');
+    } else {
+      alert('Errore AI: ' + err.message);
+    }
+    btn.textContent = 'Confronta con Claude →';
+    btn.disabled = false;
+  }
 }
 
 /**
