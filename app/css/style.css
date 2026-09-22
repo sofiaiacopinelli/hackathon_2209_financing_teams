@@ -153,17 +153,27 @@ body {
 .hero-subtitle { font-size: 1.1rem; color: var(--muted); margin-bottom: 16px; }
 .hero-desc { font-size: 0.95rem; color: var(--muted); line-height: 1.75; max-width: 500px; margin: 0 auto 28px; }
 
-.feature-pills {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  justify-content: center; margin-bottom: 36px;
+.hero-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 440px;
+  margin: 0 auto 36px;
+  text-align: left;
 }
-.pill {
-  background: transparent;
+.hero-step {
+  background: rgba(161,0,255,0.06);
   border: 1px solid var(--acc-purple-line);
-  color: var(--acc-purple-mid);
-  padding: 5px 14px; border-radius: 20px;
-  font-size: 0.82rem; font-weight: 500;
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
+.hs-icon { font-size: 1.4rem; }
+.hs-title { color: var(--text); font-weight: 600; font-size: 0.88rem; }
+.hs-sub { color: var(--muted); font-size: 0.78rem; }
+.hero-time { font-size: 0.8rem; color: var(--muted); margin-top: 14px; }
 
 /* ============================================================
    BUTTONS
