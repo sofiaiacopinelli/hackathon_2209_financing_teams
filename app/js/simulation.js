@@ -5,7 +5,7 @@
 
 import { showStep } from './navigation.js';
 import { state } from './state.js';
-import { TIPS, ACTIONS } from './constants.js';
+import { TIPS } from './constants.js';
 import { monthlySavings, compoundGrowth, fmt } from './utils.js';
 import { SERVER } from './ai.js';
 
@@ -167,29 +167,3 @@ async function expandTip(key, tip, card) {
   }
 }
 
-/**
- * Renderizza le azioni consigliate per il livello utente.
- * Se il risparmio mensile è negativo, aggiunge un avviso prioritario in cima.
- *
- * @param {number} savings - Risparmio mensile corrente in euro
- */
-export function renderActions(savings) {
-  const level = state.level || 'principiante';
-  let actions = [...(ACTIONS[level] || ACTIONS.principiante)];
-
-  if (savings < 0) {
-    actions.unshift({
-      title: '⚠️ Le uscite superano le entrate',
-      text: "La priorità assoluta è riequilibrare il budget. Identifica le spese più facili da ridurre (ristoranti, abbonamenti, shopping) e punta ad avere almeno qualcosa da parte ogni mese."
-    });
-  }
-
-  document.getElementById('actionList').innerHTML = actions.slice(0, 4).map((a, i) => `
-    <div class="action-item">
-      <div class="action-num">${i + 1}</div>
-      <div class="action-text">
-        <strong>${a.title}</strong>
-        <span>${a.text}</span>
-      </div>
-    </div>`).join('');
-}

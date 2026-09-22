@@ -6,7 +6,7 @@
 import { showStep } from './navigation.js';
 import { state } from './state.js';
 import { MARKET_RATES } from './market-rates.js';
-import { MORTGAGE_DURATIONS, MORTGAGE_IMPROVEMENT_ACTIONS } from './constants.js';
+import { MORTGAGE_DURATIONS, MORTGAGE_IMPROVEMENT_ACTIONS, QUIZ } from './constants.js';
 import { monthlySavings, calcolaRata, calcolaImportoMax, fmt } from './utils.js';
 import { SERVER } from './ai.js';
 
@@ -16,6 +16,30 @@ import { SERVER } from './ai.js';
 export function goToMortgage() {
   renderMortgage();
   showStep('mortgage');
+}
+
+/**
+ * Naviga allo step valutatore preventivo.
+ * Pre-popola la rata dal simulatore (se impostato) e, se l'utente ha già
+ * un mutuo in corso, pre-popola la rata dalle spese inserite.
+ */
+export function goToEvaluator() {
+  // Pre-fill dal simulatore interattivo
+  const simAmount   = document.getElementById('simAmount');
+  const simDuration = document.getElementById('simDuration');
+  const simRate     = document.getElementById('simRate');
+  if (simAmount?.value)   document.getElementById('evalAmount').value   = simAmount.value;
+  if (simDuration?.value) document.getElementById('evalDuration').value = simDuration.value;
+  if (simRate?.value)     document.getElementById('evalRate').value     = simRate.value;
+
+  // Se ha già un mutuo in corso (housing=1), pre-popola rata dalla voce affitto/mutuo
+  const housingIdx = QUIZ.findIndex(q => q.key === 'housing');
+  if (housingIdx >= 0 && state.answers[housingIdx] === 1 && state.expenses?.affitto) {
+    const evalRata = document.getElementById('evalRata');
+    if (evalRata && !evalRata.value) evalRata.value = state.expenses.affitto;
+  }
+
+  showStep('evaluator');
 }
 
 /**

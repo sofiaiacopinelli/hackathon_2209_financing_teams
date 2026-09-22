@@ -13,7 +13,7 @@ import { goToSimulation } from './simulation.js';
 import { renderProfile } from './profile.js';
 import { showStep, registerQuizNavigation } from './navigation.js';
 import { requestAIAnalysis } from './ai.js';
-import { goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI } from './mortgage.js';
+import { goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI, goToEvaluator } from './mortgage.js';
 import { state } from './state.js';
 
 // Risolve la dipendenza circolare navigation ↔ quiz:
@@ -86,6 +86,7 @@ const app = {
   runEvaluation,
   requestEvalAI,
   requestExpenseAI,
+  goToEvaluator,
 };
 
 // Espone l'oggetto app globalmente per i gestori onclick inline nell'HTML
