@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinanzaFacile — Il tuo assistente finanziario</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Barra progressione sottile (top) -->
+  <div class="progress-bar-container">
+    <div class="progress-bar-fill" id="progressBarFill"></div>
+  </div>
+
+  <div class="app-container">
+
+    <!-- ══ FLOW INDICATOR ══ -->
+    <nav class="step-flow" id="stepFlow" style="display:none" aria-label="Flusso">
+      <div class="sf-item" id="sf-quiz">
+        <span class="sf-num">01</span>
+        <span class="sf-label">Quiz</span>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-item" id="sf-expenses">
+        <span class="sf-num">02</span>
+        <span class="sf-label">Spese</span>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-item" id="sf-profile">
+        <span class="sf-num">03</span>
+        <span class="sf-label">Profilo</span>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-item" id="sf-simulation">
+        <span class="sf-num">04</span>
+        <span class="sf-label">Risultato</span>
+      </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-item" id="sf-mortgage">
+        <span class="sf-num">05</span>
+        <span class="sf-label">Mutuo</span>
+      </div>
+    </nav>
+
+    <!-- ══ STEP 0: Landing ══ -->
+    <div class="step active" id="step-landing">
+      <div class="hero">
+        <div class="hero-icon">🧭</div>
+        <h1>Finanza<span>Facile</span></h1>
+        <p class="hero-subtitle">Capire i propri soldi, finalmente semplice.</p>
+        <p class="hero-desc">
+          Rispondi a qualche domanda e scopri dove va il tuo stipendio,
+          quanto puoi mettere da parte e se sei pronto per un mutuo.
+        </p>
+        <div class="hero-steps">
+          <div class="hero-step">
+            <span class="hs-icon">📝</span>
+            <span class="hs-title">Quiz adattivo</span>
+            <span class="hs-sub">15 domande su finanza e stile di vita</span>
+          </div>
+          <div class="hero-step">
+            <span class="hs-icon">💳</span>
+            <span class="hs-title">Le tue spese</span>
+            <span class="hs-sub">Vedi dove va ogni euro</span>
+          </div>
+          <div class="hero-step">
+            <span class="hs-icon">📈</span>
+            <span class="hs-title">Il tuo futuro</span>
+            <span class="hs-sub">Cosa succede se risparmi</span>
+          </div>
+          <div class="hero-step">
+            <span class="hs-icon">🏠</span>
+            <span class="hs-title">Il mutuo</span>
+            <span class="hs-sub">Quanto puoi permetterti</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-large" onclick="app.startQuiz()">Parti da qui →</button>
+        <p class="hero-time">⏱ Bastano 5 minuti · nessuna registrazione</p>
+      </div>
+    </div>
+
+    <!-- ══ STEP 1: Quiz ══ -->
+    <div class="step" id="step-quiz">
+      <div class="step-header">
+        <div class="step-badge" id="quizBadge">Domanda 1 di 6</div>
+        <h2 id="questionTitle"></h2>
+      </div>
+      <div class="question-container">
+        <p class="question-text" id="questionText"></p>
+        <div class="options-list" id="optionsList"></div>
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="app.prevQuestion()" id="btnPrevQ">← Indietro</button>
+        <button class="btn btn-primary" onclick="app.nextQuestion()" id="btnNextQ" disabled>Avanti →</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 2: Profilo ══ -->
+    <div class="step" id="step-profile">
+      <div class="profile-result">
+        <div class="profile-icon" id="profileIcon"></div>
+        <h2 id="profileTitle"></h2>
+        <p id="profileDesc"></p>
+        <p class="profile-context-row" id="profileContextRow" style="display:none"></p>
+        <div class="score-bars">
+          <div class="score-bar-item">
+            <span class="sb-label">Conoscenza finanziaria</span>
+            <div class="score-bar"><div class="score-bar-fill" id="knowledgeBar"></div></div>
+            <span class="sb-val" id="knowledgeLabel"></span>
+          </div>
+          <div class="score-bar-item">
+            <span class="sb-label">Gestione del denaro</span>
+            <div class="score-bar"><div class="score-bar-fill green" id="lifestyleBar"></div></div>
+            <span class="sb-val" id="lifestyleLabel"></span>
+          </div>
+        </div>
+        <div class="step-nav" style="margin-top:32px">
+          <button class="btn btn-ghost" onclick="app.goToExpenses(true)">← Torna alle spese</button>
+          <button class="btn btn-primary btn-large" onclick="app.goToSimulation()">Simula il mio futuro →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STEP 3: Spese ══ -->
+    <div class="step" id="step-expenses">
+      <div class="step-header">
+        <h2>Le tue spese mensili</h2>
+        <p class="step-subtitle">Puoi inserire i valori a mano, usare 📊 per le medie italiane come punto di partenza, oppure chiedere all'AI ✨ di stimarli in base al tuo stipendio e alle risposte che hai dato.</p>
+        <div class="avg-actions">
+          <button class="btn btn-ghost btn-avg" onclick="app.fillAverageValues()">📊 Usa valori medi italiani</button>
+        </div>
+      </div>
+
+      <div class="income-card">
+        <div class="income-row">
+          <div class="income-info">
+            <span class="income-icon">💼</span>
+            <span class="income-label-text">Stipendio / Entrate mensili nette</span>
+          </div>
+          <div class="input-group">
+            <span class="input-prefix">€</span>
+            <input type="number" id="incomeInput" placeholder="1800" min="0" oninput="app.updateSavings()">
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn btn-ai btn-avg-ai" id="btnExpenseAI" onclick="app.requestExpenseAI()" disabled>✨ Suggerisci spese con AI</button>
+        </div>
+      </div>
+
+      <div class="expense-grid" id="expenseGrid"></div>
+
+      <div class="savings-preview" id="savingsPreview" style="display:none">
+        <div class="savings-row">
+          <span>Entrate mensili</span>
+          <span class="savings-amount positive" id="previewIncome">+€ 0</span>
+        </div>
+        <div class="savings-row">
+          <span>Uscite totali</span>
+          <span class="savings-amount negative" id="previewExpenses">-€ 0</span>
+        </div>
+        <div class="savings-row savings-total">
+          <span>Risparmio mensile</span>
+          <span class="savings-amount" id="previewSavings">€ 0</span>
+        </div>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="app.backToQuiz()">← Torna al quiz</button>
+        <button class="btn btn-primary" onclick="app.goToProfile()">Scopri il mio profilo →</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 4: Simulazione + Tips ══ -->
+    <div class="step" id="step-simulation">
+      <div class="step-header">
+        <h2>Il tuo futuro finanziario</h2>
+        <p class="step-subtitle">Ecco come i tuoi risparmi evolvono nei prossimi 20 anni in 3 scenari diversi</p>
+      </div>
+
+      <div class="metrics-grid" id="metricsGrid"></div>
+
+      <div class="chart-container">
+        <canvas id="simulationChart"></canvas>
+      </div>
+
+      <div class="chart-legend-desc" id="chartLegendDesc"></div>
+
+      <!-- AI Enhancement banner -->
+      <div class="ai-banner" id="aiBanner">
+        <div class="ai-banner-left">
+          <span class="ai-icon">🤖</span>
+          <div>
+            <strong>Analisi AI personalizzata</strong>
+            <span>Il server locale elabora i tuoi dati con Claude e genera un'analisi contestuale personalizzata</span>
+          </div>
+        </div>
+        <div class="ai-banner-right">
+          <button class="btn btn-ai" onclick="app.requestAIAnalysis()">Analizza con AI</button>
+        </div>
+      </div>
+
+      <!-- AI result -->
+      <div class="ai-result" id="aiResult" style="display:none">
+        <div class="ai-result-header">
+          <span>🤖</span> <strong>Analisi AI — Claude</strong>
+        </div>
+        <div class="ai-result-body" id="aiResultBody"></div>
+      </div>
+
+      <div class="tips-section">
+        <h3>💡 I concetti che ti aiutano a capire</h3>
+        <p class="tips-intro" id="tipsIntro"></p>
+        <div class="tips-grid" id="tipsGrid"></div>
+      </div>
+
+      <div class="step-nav" style="margin-top:32px">
+        <button class="btn btn-ghost" onclick="app.showStep('profile')">← Torna al profilo</button>
+        <button class="btn btn-primary" onclick="app.goToMortgage()">Calcola mutuo →</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 5: Mutuo ══ -->
+    <div class="step" id="step-mortgage">
+      <div class="step-header">
+        <h2>Che mutuo puoi permetterti?</h2>
+        <p class="step-subtitle">Basato sul tuo reddito e le tue spese, ecco cosa dicono i numeri</p>
+      </div>
+
+      <div id="mortgageResultCard"></div>
+
+      <div id="mortgageOptimalSection" style="display:none"></div>
+
+      <div class="mortgage-simulator" id="mortgageSimulator">
+        <h3>🎛 Simula il tuo mutuo</h3>
+        <div class="sim-row">
+          <label>Importo richiesto: <strong id="simAmountLabel">€ 100.000</strong></label>
+          <input type="range" id="simAmount" min="20000" max="500000" step="5000" value="100000" oninput="app.updateMortgageSim()">
+        </div>
+        <div class="sim-row">
+          <label>Durata: <strong id="simDurationLabel">20 anni</strong></label>
+          <input type="range" id="simDuration" min="5" max="30" step="5" value="20" oninput="app.updateMortgageSim()">
+        </div>
+        <div class="sim-row">
+          <label>Tasso annuo: <strong id="simRateLabel">3.5%</strong></label>
+          <input type="range" id="simRate" min="1" max="8" step="0.1" value="3.5" oninput="app.updateMortgageSim()">
+        </div>
+        <div id="simResult"></div>
+      </div>
+
+      <div id="mortgageActionsSection"></div>
+
+      <div class="step-nav" style="margin-top:32px">
+        <button class="btn btn-ghost" onclick="app.showStep('simulation')">← Torna alla simulazione</button>
+        <button class="btn btn-primary" onclick="app.goToEvaluator()">Ho già un preventivo →</button>
+      </div>
+      <div style="text-align:center; margin-top:12px">
+        <button class="btn btn-ghost" onclick="app.restart()" style="font-size:0.8rem">Ricomincia dall'inizio 🔄</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 6: Valuta Preventivo ══ -->
+    <div class="step" id="step-evaluator">
+      <div class="step-header">
+        <h2>🔍 Analizza il tuo preventivo</h2>
+        <p class="step-subtitle" id="evalSubtitle">Inserisci i dati dell'offerta ricevuta dalla banca — ti diciamo se è buona, cosa puoi negoziare e quanto ti costerà davvero.</p>
+      </div>
+
+      <div class="eval-grid">
+        <div class="eval-field">
+          <label>🏠 Importo richiesto</label>
+          <div class="input-group"><span class="input-prefix">€</span>
+            <input type="number" id="evalAmount" placeholder="150.000" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>🏡 Valore immobile</label>
+          <div class="input-group"><span class="input-prefix">€</span>
+            <input type="number" id="evalPropertyValue" placeholder="200.000" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>📅 Durata</label>
+          <div class="input-group"><span class="input-prefix">anni</span>
+            <input type="number" id="evalDuration" placeholder="25" min="5" max="30" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>📈 Tasso nominale annuo</label>
+          <div class="input-group"><span class="input-prefix">%</span>
+            <input type="number" id="evalRate" placeholder="3.50" step="0.01" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>💯 TAEG dichiarato</label>
+          <div class="input-group"><span class="input-prefix">%</span>
+            <input type="number" id="evalTAEG" placeholder="4.20" step="0.01" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>💳 Rata mensile dichiarata</label>
+          <div class="input-group"><span class="input-prefix">€</span>
+            <input type="number" id="evalRata" placeholder="820" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>🧾 Spese iniziali (istruttoria, ecc.)</label>
+          <div class="input-group"><span class="input-prefix">€</span>
+            <input type="number" id="evalFees" placeholder="2.500" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>⚖️ Tipo di tasso</label>
+          <select id="evalRateType" onchange="app.runEvaluation()" class="eval-select">
+            <option value="fisso">Fisso</option>
+            <option value="variabile">Variabile</option>
+            <option value="misto">Misto</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="evalResult" style="display:none"></div>
+
+      <div class="ai-banner" id="evalAiBanner" style="display:none">
+        <div class="ai-banner-left">
+          <span class="ai-icon">🤖</span>
+          <div>
+            <strong>Parere AI sul preventivo</strong>
+            <span>Claude legge i numeri, identifica i punti deboli e ti dice cosa negoziare con la banca</span>
+          </div>
+        </div>
+        <div class="ai-banner-right">
+          <button class="btn btn-ai" onclick="app.requestEvalAI()">Chiedi a Claude →</button>
+        </div>
+      </div>
+
+      <div class="ai-result" id="evalAiResult" style="display:none">
+        <div class="ai-result-header"><span>🤖</span> <strong>Parere AI — Claude</strong></div>
+        <div class="ai-result-body" id="evalAiResultBody"></div>
+      </div>
+
+      <div class="ai-banner" id="evalCompareAiBanner" style="display:none">
+        <div class="ai-banner-left">
+          <span class="ai-icon">🔎</span>
+          <div>
+            <strong>Confronto AI con il tuo profilo ideale</strong>
+            <span>Claude confronta il preventivo con i valori calcolati per te: cosa è buono, cosa è critico, cosa negoziare</span>
+          </div>
+        </div>
+        <div class="ai-banner-right">
+          <button class="btn btn-ai" onclick="app.requestCompareAI()">Confronta con Claude →</button>
+        </div>
+      </div>
+
+      <div class="ai-result" id="evalCompareAiResult" style="display:none">
+        <div class="ai-result-header"><span>🔎</span> <strong>Confronto con il tuo profilo ideale — Claude</strong></div>
+        <div class="ai-result-body" id="evalCompareAiResultBody"></div>
+      </div>
+
+      <div class="step-nav" style="margin-top:32px">
+        <button class="btn btn-ghost" onclick="app.showStep('mortgage')">← Torna al mutuo</button>
+        <button class="btn btn-primary" onclick="app.restart()">Ricomincia 🔄</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
