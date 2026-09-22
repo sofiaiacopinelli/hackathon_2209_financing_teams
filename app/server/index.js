@@ -33,5 +33,6 @@ app.listen(PORT, () => {
   console.log('\n=== FinanzaFacile Server ===');
   console.log(`  http://localhost:${PORT}`);
   console.log('  Backend: claude CLI (no API key needed)');
-  console.log('  Endpoint: GET /health  POST /analyze  POST /mortgage-offer  POST /suggest-expenses  POST /quiz-feedback  POST /dispatch\n');
+  console.log('  Endpoint: GET /health  POST /analyze  POST /mortgage-offer  POST /suggest-expenses');
+  console.log('            POST /quiz-feedback  POST /tip-detail  POST /mortgage-coach  POST /dispatch\n');
 });

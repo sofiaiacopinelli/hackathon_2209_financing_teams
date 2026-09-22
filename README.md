@@ -38,7 +38,7 @@ hackathon_2209_financing_teams/
 │   ├── css/style.css       — stili (Accenture dark theme)
 │   ├── js/                 — moduli ES frontend
 │   │   ├── main.js         — inizializzazione + window.app
-│   │   ├── quiz.js         — step 1: quiz adattivo (6 domande)
+│   │   ├── quiz.js         — step 1: quiz adattivo (15 domande)
 │   │   ├── expenses.js     — step 2: inserimento spese per categoria
 │   │   ├── profile.js      — step 3: punteggio profilo
 │   │   ├── simulation.js   — step 4: grafico 20 anni + tip card AI
@@ -81,7 +81,7 @@ hackathon_2209_financing_teams/
 1. **Quiz** — 15 domande su conoscenza finanziaria, stile di vita e contesto abitativo
 2. **Spese** — inserimento spese mensili per categoria con suggerimento AI
 3. **Profilo** — punteggio knowledge/lifestyle, livello (principiante/intermedio/esperto)
-4. **Simulazione** — grafico 20 anni con 6 scenari (pessimistico → ottimistico → realistico con imprevisti → crescita stipendio); tip card cliccabili con approfondimento AI
+4. **Simulazione** — grafico 20 anni con 3 scenari (senza interessi / realistico 5% / progressivo con crescita stipendio); tip card cliccabili con approfondimento AI
 5. **Mutuo** — affordability checker (ok/warning/danger); simulatore interattivo; se warning/danger → prossimi passi generati da AI in base al profilo
 6. **Valutatore preventivo** — analisi LTV, sostenibilità rata, competitività tasso; parere AI
 

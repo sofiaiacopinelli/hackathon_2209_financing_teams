@@ -38,6 +38,7 @@ const AGENT_DESCRIPTIONS = `
 - suggest-expenses: stima delle spese mensili realistiche per un utente (produce JSON)
 - quiz-feedback: feedback su una risposta errata o parziale a una domanda del quiz finanziario
 - tip-detail: approfondimento personalizzato su un concetto finanziario specifico
+- mortgage-coach: piano AI per migliorare la situazione finanziaria e prepararsi al mutuo
 `.trim();
 
 /**
@@ -59,7 +60,7 @@ async function autoRoute(data) {
     dataDesc,
     ``,
     `Rispondi SOLO con il nome dell'agente (una parola/stringa esatta tra quelle elencate), senza spiegazioni.`,
-    `Valori validi: analyze, mortgage-offer, suggest-expenses, quiz-feedback`,
+    `Valori validi: analyze, mortgage-offer, mortgage-compare, suggest-expenses, quiz-feedback, tip-detail, mortgage-coach`,
   ].join('\n');
 
   try {

@@ -65,7 +65,8 @@ app/server/routes.js
         ├── 'suggest-expenses' → agents/expense-suggester.js
         ├── 'mortgage-offer'   → agents/mortgage-advisor.js
         ├── 'quiz-feedback'    → agents/quiz-tutor.js
-        └── 'tip-detail'       → agents/tip-explainer.js
+        ├── 'tip-detail'       → agents/tip-explainer.js
+        └── 'mortgage-coach'   → agents/mortgage-coach.js
 ```
 
 Ogni agente:
@@ -73,7 +74,7 @@ Ogni agente:
 2. Passa il prompt a `callClaude()` — spawn di `claude --print` (nessuna API key necessaria)
 3. Restituisce la risposta come stringa
 
-Route disponibili: `GET /health`, `POST /analyze`, `POST /quiz-feedback`, `POST /suggest-expenses`, `POST /mortgage-offer`, `POST /tip-detail`, `POST /dispatch`
+Route disponibili: `GET /health`, `POST /analyze`, `POST /quiz-feedback`, `POST /suggest-expenses`, `POST /mortgage-offer`, `POST /tip-detail`, `POST /mortgage-coach`, `POST /dispatch`
 
 ---
 
@@ -109,7 +110,7 @@ Le variabili sono definite in `:root` in `app/css/style.css`. Usare sempre quest
 
 ## Funzionalità implementate (al 2026-09-22)
 
-- **Quiz adattivo**: 6 domande knowledge + lifestyle + contesto abitativo/mutuo; feedback immediato con AI (quiz-tutor)
+- **Quiz adattivo**: 15 domande (5 knowledge + 5 lifestyle-context + 3 lifestyle + 2 mortgage-context) + 1 section break = QUIZ.length 16; feedback immediato con AI (quiz-tutor)
 - **Step spese**: form dinamico per categoria; suggerimento AI (expense-suggester); medie ISTAT; preview risparmio in tempo reale
 - **Step profilo**: punteggio knowledge + lifestyle; livello (principiante/intermedio/esperto)
 - **Step simulazione**: grafico Chart.js 20 anni (3 scenari); tip card cliccabili con expand AI (tip-explainer); metriche

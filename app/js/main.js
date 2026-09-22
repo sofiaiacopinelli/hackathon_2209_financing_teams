@@ -15,6 +15,7 @@ import { showStep, registerQuizNavigation } from './navigation.js';
 import { requestAIAnalysis } from './ai.js';
 import { goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI, requestCompareAI, goToEvaluator } from './mortgage.js';
 import { state } from './state.js';
+import { QUIZ } from './constants.js';
 
 // Risolve la dipendenza circolare navigation ↔ quiz:
 // navigation.js usa backToQuiz tramite questo callback invece di importarlo direttamente.
@@ -45,7 +46,7 @@ function goToProfile() {
  */
 function restart() {
   state.quizStep = 0;
-  state.answers = new Array(8).fill(null);
+  state.answers = new Array(QUIZ.length).fill(null);
   state.knowledgeScore = 0;
   state.lifestyleScore = 0;
   state.mortgageContext = {};

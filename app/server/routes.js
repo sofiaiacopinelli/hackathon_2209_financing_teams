@@ -6,12 +6,14 @@
  * e restituisce il risultato come JSON.
  *
  * Route disponibili:
- *   GET  /health           — healthcheck
- *   POST /analyze          — analisi finanziaria completa
- *   POST /mortgage-offer   — valutazione preventivo mutuo
- *   POST /suggest-expenses — stima spese mensili (risposta JSON)
- *   POST /quiz-feedback    — feedback personalizzato su risposta quiz
- *   POST /dispatch         — routing automatico (task_type: 'auto' o noto)
+ *   GET  /health            — healthcheck (agents: 7)
+ *   POST /analyze           — analisi finanziaria completa
+ *   POST /mortgage-offer    — valutazione preventivo mutuo
+ *   POST /suggest-expenses  — stima spese mensili (risposta JSON)
+ *   POST /quiz-feedback     — feedback personalizzato su risposta quiz
+ *   POST /tip-detail        — approfondimento AI su concetto finanziario
+ *   POST /mortgage-coach    — piano AI miglioramento situazione per mutuo
+ *   POST /dispatch          — routing automatico (task_type: 'auto' o noto)
  */
 
 import { dispatch } from '../../agents/orchestrator.js';
@@ -23,7 +25,7 @@ import { dispatch } from '../../agents/orchestrator.js';
 export function registerRoutes(app) {
 
   app.get('/health', (_req, res) => {
-    res.json({ ok: true, backend: 'claude-cli', agents: 4 });
+    res.json({ ok: true, backend: 'claude-cli', agents: 7 });
   });
 
   app.post('/analyze', async (req, res) => {

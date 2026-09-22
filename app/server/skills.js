@@ -1,7 +1,7 @@
 /**
  * FinanzaFacile — Skills (JS)
- * Implementazioni dei tool richiamati da Claude nell'agentic loop.
- * Specchiano le Python skills in agents/skills/.
+ * Implementazioni dei tool richiamati dagli agenti prima di chiamare Claude.
+ * Fornisce contesto numerico ricco (savings rate, anomalie, soglie mutuo) al prompt.
  */
 
 // ── evaluate_quiz ────────────────────────────────────────────

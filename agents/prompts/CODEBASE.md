@@ -39,36 +39,37 @@ Variabili CSS principali: `--acc-purple` (#A100FF), `--acc-purple-mid` (#CC66FF)
 |---|---|---|
 | `main.js` | Entry point. Assembla `window.app`, coordina tutti i moduli, registra la dipendenza circolare navigation↔quiz. | `app` (window) |
 | `state.js` | Singleton mutabile dello stato globale. | `state` |
-| `constants.js` | Costanti statiche. Nessuna dipendenza. | `QUIZ`, `PROFILES`, `CATEGORIES`, `ISTAT_AVERAGES`, `MORTGAGE_DURATIONS`, `ACTIONS`, `MORTGAGE_IMPROVEMENT_ACTIONS` |
+| `constants.js` | Costanti statiche. Nessuna dipendenza. | `QUIZ`, `TIPS`, `PROFILES`, `CATEGORIES`, `ISTAT_AVERAGES`, `MORTGAGE_DURATIONS`, `ACTIONS`, `MORTGAGE_IMPROVEMENT_ACTIONS` |
 | `utils.js` | Funzioni pure: formattazione valuta, calcoli finanziari, derivazioni da `state`. | `fmt`, `totalExpenses`, `monthlySavings`, `getProfile`, `compoundGrowth`, `calcolaRata`, `calcolaImportoMax` |
-| `navigation.js` | `showStep()` e gestione navigazione tra step HTML. Risolve la dipendenza circolare con quiz via callback. | `showStep`, `registerQuizNavigation`, `FLOW_ORDER` |
+| `navigation.js` | `showStep()` e gestione navigazione tra step HTML. Risolve la dipendenza circolare con quiz via callback. | `showStep`, `registerQuizNavigation`, `navigateBack`, `FLOW_ORDER` |
 | `quiz.js` | Logica quiz: rendering domande, navigazione prev/next, feedback immediato, `computeScores()`. | `startQuiz`, `prevQuestion`, `nextQuestion`, `computeScores`, `backToQuiz`, `renderQuestion`, `showKnowledgeFeedback`, `selectAnswer` |
 | `profile.js` | Renderizza lo step profilo con punteggi e riepilogo contesto di vita. | `renderProfile` |
 | `expenses.js` | Step spese mensili: form dinamico, suggerimento AI, calcolo risparmio. | `goToExpenses`, `fillAverageValues`, `requestExpenseAI`, `updateSavings`, `buildVisibleCategories`, `renderExpenseForm` |
-| `simulation.js` | Step simulazione futura: grafico Chart.js, metriche, tip card cliccabili con expand AI. | `goToSimulation`, `renderTips` |
-| `mortgage.js` | Step mutuo: affordability, profilo ottimale vs media IT, simulatore interattivo, valutazione preventivo, prossimi passi, navigazione al valutatore. | `goToMortgage`, `updateMortgageSim`, `runEvaluation`, `requestEvalAI`, `goToEvaluator` |
+| `simulation.js` | Step simulazione futura: grafico Chart.js, metriche, tip card cliccabili con expand AI. | `goToSimulation`, `renderSimulation`, `renderTips` |
+| `mortgage.js` | Step mutuo: affordability, profilo ottimale vs media IT, simulatore interattivo, valutazione preventivo, prossimi passi, navigazione al valutatore. | `goToMortgage`, `renderMortgage`, `updateMortgageSim`, `runEvaluation`, `requestEvalAI`, `requestCompareAI`, `goToEvaluator` |
 | `ai.js` | Funzioni di chiamata al server AI locale. | `requestAIAnalysis`, `SERVER` (costante URL) |
 | `market-rates.js` | Singleton mutabile dei tassi di mercato (aggiornato in background da BCE). | `MARKET_RATES` |
 | `market-data.js` | `MarketDataSkill`: recupera tassi reali da BCE SDMX REST API. Avviato dopo il quiz. | `MarketDataSkill` |
 
-**`state` contiene:** `quizStep`, `answers`, `knowledgeScore`, `lifestyleScore`, `mortgageContext`, `lifestyleContext`, `level`, `income`, `expenses`, `evalData`, `chart`, `marketDataReady`, `marketDataSummary`, `weakAreas`
+**`state` contiene:** `quizStep`, `answers`, `knowledgeScore`, `lifestyleScore`, `mortgageContext`, `lifestyleContext`, `level`, `income`, `expenses`, `weakAreas` (array stringhe), `evalData`, `chart`, `marketDataReady`, `marketDataSummary`
 
 ---
 
 ## Server — `app/server/`
 
 ### `app/server/index.js`
-Entry point Express. Monta le route, configura CORS e avvia il server sulla porta `.env`.
+Entry point Express. Monta le route, configura CORS e avvia il server sulla porta `process.env.PORT` (default: **3000**). Serve anche il frontend come file statici.
 
 ### `app/server/routes.js`
 Definisce le route HTTP e le delega all'orchestratore:
-- `GET  /health`
-- `POST /analyze`           → analisi finanziaria completa
-- `POST /quiz-feedback`     → feedback quiz
-- `POST /suggest-expenses`  → suggerimento spese
-- `POST /mortgage-offer`    → valutazione preventivo mutuo
-- `POST /tip-detail`        → approfondimento AI su concetto finanziario
-- `POST /dispatch`          → routing automatico (task_type: auto o noto)
+- `GET  /health`             → healthcheck (`agents: 7`)
+- `POST /analyze`            → analisi finanziaria completa
+- `POST /quiz-feedback`      → feedback quiz
+- `POST /suggest-expenses`   → suggerimento spese
+- `POST /mortgage-offer`     → valutazione preventivo mutuo
+- `POST /tip-detail`         → approfondimento AI su concetto finanziario
+- `POST /mortgage-coach`     → piano AI miglioramento per mutuo
+- `POST /dispatch`           → routing automatico (task_type: auto o noto)
 
 ### `app/server/skills.js`
 Implementazioni JS dei tool usati da Claude: `evaluate_quiz`, `analyze_expenses`, `run_simulation`, `get_tips`, `propose_mortgage`, `evaluate_mortgage_offer`, `optimal_mortgage_profile`.
@@ -97,6 +98,7 @@ Implementazioni JS dei tool usati da Claude: `evaluate_quiz`, `analyze_expenses`
 | `mortgage-advisor.js` | MortgageAdvisor | `'mortgage-offer'` |
 | `quiz-tutor.js` | QuizTutor | `'quiz-feedback'` |
 | `tip-explainer.js` | TipExplainer | `'tip-detail'` |
+| `mortgage-coach.js` | MortgageCoach | `'mortgage-coach'` — piano AI per migliorare la situazione e prepararsi al mutuo |
 
 Ogni agente: `loadPrompt(name, vars)` riempe il template `.md` con `{{PLACEHOLDER}}` → passa a `callClaude()` (spawn `claude --print`).
 
@@ -111,6 +113,8 @@ Ogni agente: `loadPrompt(name, vars)` riempe il template `.md` con `{{PLACEHOLDE
 | `mortgage-advisor.md` | `mortgage-advisor.js` |
 | `quiz-tutor.md` | `quiz-tutor.js` |
 | `tip-explainer.md` | `tip-explainer.js` |
+| `mortgage-coach.md` | `mortgage-coach.js` |
+| `mortgage-comparator.md` | `mortgage-comparator.js` (se presente) |
 | `test-generator.md` | — (generazione test) |
 | `CODEBASE.md` | ← sei qui |
 

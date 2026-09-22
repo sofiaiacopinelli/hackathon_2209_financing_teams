@@ -41,7 +41,7 @@ export function showStep(id) {
   document.getElementById('step-' + id).classList.add('active');
 
   // Barra di progressione (linea sottile in cima alla pagina)
-  const allSteps = ['landing', 'quiz', 'profile', 'expenses', 'simulation'];
+  const allSteps = ['landing', 'quiz', 'expenses', 'profile', 'simulation', 'mortgage'];
   const idx = allSteps.indexOf(id);
   document.getElementById('progressBarFill').style.width =
     idx > 0 ? (idx / (allSteps.length - 1) * 100) + '%' : '0%';
