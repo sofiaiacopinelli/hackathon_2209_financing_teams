@@ -91,16 +91,13 @@ export function renderQuestion() {
     btn.className = 'option-item';
     btn.textContent = opt;
 
-    if (saved !== null) {
+    if (saved !== null && q.type === 'knowledge') {
       btn.disabled = true;
-      if (q.type === 'knowledge') {
-        if (i === q.correct)                           btn.classList.add('correct');
-        else if (i === saved && i === q.partial)       btn.classList.add('partial');
-        else if (i === saved)                          btn.classList.add('wrong');
-      } else {
-        if (i === saved) btn.classList.add('selected');
-      }
+      if (i === q.correct)                           btn.classList.add('correct');
+      else if (i === saved && i === q.partial)       btn.classList.add('partial');
+      else if (i === saved)                          btn.classList.add('wrong');
     } else {
+      if (saved !== null && i === saved) btn.classList.add('selected');
       btn.onclick = () => selectAnswer(i);
     }
     listEl.appendChild(btn);
@@ -111,6 +108,7 @@ export function renderQuestion() {
   nextBtn.disabled    = saved === null;
   nextBtn.textContent = state.quizStep === QUIZ.length - 1 ? 'Vedi il mio profilo →' : 'Avanti →';
   prevBtn.textContent = state.quizStep === 0 ? '← Home' : '← Indietro';
+  prevBtn.style.display = q.type === 'knowledge' ? 'none' : '';
 }
 
 /**
@@ -180,13 +178,13 @@ export function selectAnswer(idx) {
   state.answers[state.quizStep] = idx;
 
   document.querySelectorAll('.option-item').forEach((btn, i) => {
-    btn.disabled = true;
     if (q.type === 'knowledge') {
+      btn.disabled = true;
       if (i === q.correct)                   btn.classList.add('correct');
       else if (i === idx && i === q.partial) btn.classList.add('partial');
       else if (i === idx)                    btn.classList.add('wrong');
     } else {
-      if (i === idx) btn.classList.add('selected');
+      btn.classList.toggle('selected', i === idx);
     }
   });
 

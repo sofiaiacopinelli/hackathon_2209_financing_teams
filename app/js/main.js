@@ -25,6 +25,15 @@ registerQuizNavigation(backToQuiz);
  * Funzione di coordinamento: chiama computeScores (quiz) e renderProfile (profile).
  */
 function goToProfile() {
+  const incomeVal = parseFloat(document.getElementById('incomeInput').value) || 0;
+  if (incomeVal <= 0) {
+    const inp = document.getElementById('incomeInput');
+    inp.classList.add('input-error');
+    inp.focus();
+    inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => inp.classList.remove('input-error'), 2500);
+    return;
+  }
   computeScores();
   renderProfile();
   showStep('profile');

@@ -607,16 +607,14 @@ const app = (() => {
       btn.className = 'option-item';
       btn.textContent = opt;
 
-      if (saved !== null) {
+      if (saved !== null && q.type === 'knowledge') {
         btn.disabled = true;
-        if (q.type === 'knowledge') {
-          if (i === q.correct)                           btn.classList.add('correct');
-          else if (i === saved && i === q.partial)       btn.classList.add('partial');
-          else if (i === saved)                          btn.classList.add('wrong');
-        } else {
-          if (i === saved) btn.classList.add('selected');
-        }
+        if (i === q.correct)                       btn.classList.add('correct');
+        else if (i === saved && i === q.partial)   btn.classList.add('partial');
+        else if (i === saved)                      btn.classList.add('wrong');
       } else {
+        // lifestyle_context e lifestyle: bottoni sempre riselezionabili
+        if (saved !== null && i === saved) btn.classList.add('selected');
         btn.onclick = () => selectAnswer(i);
       }
       listEl.appendChild(btn);
@@ -697,13 +695,14 @@ const app = (() => {
     state.answers[state.quizStep] = idx;
 
     document.querySelectorAll('.option-item').forEach((btn, i) => {
-      btn.disabled = true;
       if (q.type === 'knowledge') {
+        btn.disabled = true;
         if (i === q.correct)                     btn.classList.add('correct');
         else if (i === idx && i === q.partial)   btn.classList.add('partial');
         else if (i === idx)                      btn.classList.add('wrong');
       } else {
-        if (i === idx) btn.classList.add('selected');
+        // lifestyle_context / lifestyle: bottone riselezionabile → aggiorna solo la classe
+        btn.classList.toggle('selected', i === idx);
       }
     });
 
@@ -846,9 +845,11 @@ const app = (() => {
     const housingQIdx = QUIZ.findIndex(q => q.key === 'housing');
     const housing = housingQIdx >= 0 ? state.answers[housingQIdx] : undefined;
     const housingAvg = housing === 0 ? 810 : housing === 1 ? 700 : 0;
+    const contextHints = computeContextHints();
     document.querySelectorAll('[data-cat]').forEach(inp => {
       const cat = inp.dataset.cat;
-      inp.value = cat === 'affitto' ? housingAvg : (ISTAT_AVERAGES[cat] || 0);
+      if (cat === 'affitto') inp.value = housingAvg;
+      else inp.value = contextHints[cat] ?? ISTAT_AVERAGES[cat] ?? 0;
     });
     updateSavings();
   }
@@ -918,6 +919,30 @@ const app = (() => {
     }
   }
 
+  function computeContextHints() {
+    // Indici fissi nel QUIZ array (dopo l'inserimento della domanda housing a indice 10)
+    const cars     = state.answers[9];  // 0=nessuna, 1=una, 2=due+
+    const family   = state.answers[7];  // 0=solo, 1=partner, 2=partner+figli, 3=genitori/coinquilini
+    const children = state.answers[8];  // 0=no, 1=sì uno, 2=sì due+
+
+    // Trasporti: abbonamento annuo ~€500 (€42/mese); 1 auto ~€180; 2+ auto ~€300
+    const trasporti = cars === 0 ? 42 : cars === 1 ? 180 : 300;
+
+    // Salute/farmacia cresce con i figli
+    const salute = children === 0 ? 45 : children === 1 ? 85 : 130;
+
+    // Svago cresce con i figli (attività, cinema, gite)
+    const svago = children === 0 ? 70 : children === 1 ? 110 : 150;
+
+    // Spesa alimentare dipende dal nucleo
+    const spesa = family === 0 ? 280 : family === 1 ? 400 : family === 2 ? (children === 2 ? 600 : 500) : 350;
+
+    // Bollette dipendono dal nucleo
+    const bollette = family === 0 ? 100 : family === 1 ? 130 : family === 2 ? 160 : 120;
+
+    return { trasporti, salute, svago, spesa, bollette };
+  }
+
   function buildVisibleCategories() {
     // Legge la risposta housing direttamente dalle answers del quiz (disponibile prima di computeScores)
     const housingQIdx = QUIZ.findIndex(q => q.key === 'housing');
@@ -928,7 +953,11 @@ const app = (() => {
     else if (housing === 2)   housingCat = null; // vive con famiglia: nessuna spesa abitativa
     else                      housingCat = { id: 'affitto', label: 'Affitto / Mutuo',          icon: '🏠', hint: 800 };
 
-    const rest = CATEGORIES.filter(c => c.id !== 'affitto');
+    const hints = computeContextHints();
+    const rest = CATEGORIES
+      .filter(c => c.id !== 'affitto')
+      .map(c => hints[c.id] !== undefined ? { ...c, hint: hints[c.id] } : c);
+
     return housingCat ? [housingCat, ...rest] : rest;
   }
 
