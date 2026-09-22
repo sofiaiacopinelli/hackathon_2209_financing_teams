@@ -6,7 +6,7 @@
 import { showStep } from './navigation.js';
 import { state } from './state.js';
 import { TIPS } from './constants.js';
-import { monthlySavings, compoundGrowth, fmt } from './utils.js';
+import { monthlySavings, fmt } from './utils.js';
 import { SERVER } from './ai.js';
 
 /**
@@ -55,9 +55,6 @@ export function renderSimulation() {
   const labels = Array.from({ length: years + 1 }, (_, i) => i === 0 ? 'Oggi' : `Anno ${i}`);
 
   const noInterest  = labels.map((_, i) => pmt * i * 12);
-  const low         = labels.map((_, i) => compoundGrowth(pmt, i, 0.02));
-  const mid         = labels.map((_, i) => compoundGrowth(pmt, i, 0.05));
-  const realPower   = labels.map((_, i) => (pmt * i * 12) / Math.pow(1.02, i));
   const realistic   = realisticScenarioSeries(pmt, years, 0.05);
   const progressive = progressiveScenarioSeries(pmt, years, 0.05, 0.03);
 
@@ -70,14 +67,14 @@ export function renderSimulation() {
       <div class="metric-sub">${savings >= 0 ? 'ottimo punto di partenza' : 'da riequilibrare'}</div>
     </div>
     <div class="metric-card">
-      <div class="metric-label">In 10 anni — ottimistico (5%)</div>
-      <div class="metric-value" style="color:var(--success)">${fmt(Math.max(0, mid[10]))}</div>
-      <div class="metric-sub">${mid[10] > noInterest[10] ? '+' + fmt(mid[10] - noInterest[10]) + ' vs puro' : ''}</div>
-    </div>
-    <div class="metric-card">
       <div class="metric-label">In 10 anni — realistico</div>
       <div class="metric-value" style="color:var(--warning)">${fmt(Math.max(0, realistic[10]))}</div>
       <div class="metric-sub">con imprevisti inclusi</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">In 10 anni — crescita stipendio</div>
+      <div class="metric-value" style="color:#06B6D4">${fmt(Math.max(0, progressive[10]))}</div>
+      <div class="metric-sub">${progressive[10] > realistic[10] ? '+' + fmt(progressive[10] - realistic[10]) + ' vs realistico' : ''}</div>
     </div>`;
 
   // Grafico Chart.js (distrugge il precedente se esiste)
@@ -88,12 +85,9 @@ export function renderSimulation() {
     data: {
       labels,
       datasets: [
-        { label: 'Solo risparmio (0%)',                  data: noInterest,  borderColor: '#94A3B8', borderWidth: 1.5, tension: 0.3, fill: false, pointRadius: 0 },
-        { label: 'Conto deposito (2%)',                   data: low,         borderColor: '#2563EB', borderWidth: 1.5, tension: 0.3, fill: false, pointRadius: 0 },
-        { label: 'Investimento ottimistico (5%)',          data: mid,         borderColor: '#16A34A', borderWidth: 2.5, tension: 0.3, fill: { target: 'origin', above: 'rgba(22,163,74,0.05)' }, pointRadius: 0 },
-        { label: 'Realistico con imprevisti',             data: realistic,   borderColor: '#F59E0B', borderWidth: 2.5, tension: 0.2, fill: false, borderDash: [5, 3], pointRadius: 0 },
-        { label: 'Con crescita stipendio (+3%/anno)',     data: progressive, borderColor: '#06B6D4', borderWidth: 2,   tension: 0.3, fill: false, borderDash: [3, 2], pointRadius: 0 },
-        { label: 'Potere acquisto reale (inflaz. 2%)',    data: realPower,   borderColor: '#EF4444', borderWidth: 1.5, tension: 0.3, fill: false, borderDash: [8, 4], pointRadius: 0 },
+        { label: 'Solo risparmio (0%)',              data: noInterest,  borderColor: '#94A3B8', borderWidth: 1.5, tension: 0.3, fill: false, pointRadius: 0 },
+        { label: 'Realistico con imprevisti',        data: realistic,   borderColor: '#F59E0B', borderWidth: 2.5, tension: 0.2, fill: false, borderDash: [5, 3], pointRadius: 0 },
+        { label: 'Con crescita stipendio (+3%/anno)', data: progressive, borderColor: '#06B6D4', borderWidth: 2,   tension: 0.3, fill: false, borderDash: [3, 2], pointRadius: 0 },
       ]
     },
     options: {
@@ -109,11 +103,8 @@ export function renderSimulation() {
   // Legenda testuale
   document.getElementById('chartLegendDesc').innerHTML = `
     <div class="legend-item"><div class="legend-dot" style="background:#94A3B8"></div>Risparmio puro: soldi sul conto, senza interessi né rendimenti</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#2563EB"></div>Conto deposito al 2% annuo: rendimento basso ma sicuro</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#16A34A"></div>Investimento ottimistico al 5% annuo: scenario ideale senza interruzioni</div>
     <div class="legend-item"><div class="legend-dot legend-dot--dashed" style="background:#F59E0B"></div>Realistico con imprevisti: 10 mesi/anno effettivi + emergenze agli anni 5, 10, 15</div>
-    <div class="legend-item"><div class="legend-dot legend-dot--dashed" style="background:#06B6D4"></div>Con crescita stipendio: risparmio +3% all'anno (carriera), investito al 5%</div>
-    <div class="legend-item"><div class="legend-dot legend-dot--dashed" style="background:#EF4444"></div>Potere d'acquisto reale: erosione inflazione al 2% sui risparmi fermi</div>`;
+    <div class="legend-item"><div class="legend-dot legend-dot--dashed" style="background:#06B6D4"></div>Con crescita stipendio: risparmio +3% all'anno (carriera), investito al 5%</div>`;
 
   renderTips();
 }
