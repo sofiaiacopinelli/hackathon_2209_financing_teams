@@ -254,6 +254,17 @@ const app = (() => {
         'Due o più'
       ]
     },
+    {
+      type: 'lifestyle_context',
+      key: 'housing',
+      category: 'Sezione 2 — Il tuo contesto',
+      text: 'Qual è la tua situazione abitativa attuale?',
+      options: [
+        'In affitto',
+        'Proprietario (ho già un mutuo in corso)',
+        'Con la famiglia / senza spese fisse per l\'abitazione'
+      ]
+    },
     // ── Sezione 2: Stile di vita — Abitudini ──
     {
       type: 'lifestyle',
@@ -743,7 +754,7 @@ const app = (() => {
       if (q.type === 'knowledge' && ans === q.correct) state.knowledgeScore++;
       if (q.type === 'lifestyle') state.lifestyleScore += q.scores[ans];
       if (q.type === 'mortgage_context') state.mortgageContext[i] = ans;
-      if (q.type === 'lifestyle_context') state.lifestyleContext[i] = ans;
+      if (q.type === 'lifestyle_context') state.lifestyleContext[q.key ?? i] = ans;
     });
     state.level = getProfile().id;
 
@@ -824,8 +835,12 @@ const app = (() => {
   }
 
   function fillAverageValues() {
+    const housingQIdx = QUIZ.findIndex(q => q.key === 'housing');
+    const housing = housingQIdx >= 0 ? state.answers[housingQIdx] : undefined;
+    const housingAvg = housing === 0 ? 810 : housing === 1 ? 700 : 0;
     document.querySelectorAll('[data-cat]').forEach(inp => {
-      inp.value = ISTAT_AVERAGES[inp.dataset.cat] || 0;
+      const cat = inp.dataset.cat;
+      inp.value = cat === 'affitto' ? housingAvg : (ISTAT_AVERAGES[cat] || 0);
     });
     updateSavings();
   }
@@ -895,10 +910,24 @@ const app = (() => {
     }
   }
 
+  function buildVisibleCategories() {
+    // Legge la risposta housing direttamente dalle answers del quiz (disponibile prima di computeScores)
+    const housingQIdx = QUIZ.findIndex(q => q.key === 'housing');
+    const housing = housingQIdx >= 0 ? state.answers[housingQIdx] : undefined;
+    let housingCat;
+    if (housing === 0)        housingCat = { id: 'affitto', label: 'Affitto mensile',         icon: '🏠', hint: 810 };
+    else if (housing === 1)   housingCat = { id: 'affitto', label: 'Rata mutuo',               icon: '🏦', hint: 700 };
+    else if (housing === 2)   housingCat = null; // vive con famiglia: nessuna spesa abitativa
+    else                      housingCat = { id: 'affitto', label: 'Affitto / Mutuo',          icon: '🏠', hint: 800 };
+
+    const rest = CATEGORIES.filter(c => c.id !== 'affitto');
+    return housingCat ? [housingCat, ...rest] : rest;
+  }
+
   function renderExpenseForm() {
     const grid = document.getElementById('expenseGrid');
     grid.innerHTML = '';
-    CATEGORIES.forEach(cat => {
+    buildVisibleCategories().forEach(cat => {
       const card = document.createElement('div');
       card.className = 'expense-card';
       card.innerHTML = `
