@@ -415,11 +415,20 @@ body {
   background: var(--bg-card); border: 1px solid var(--border);
   border-left: 3px solid var(--acc-purple);
   padding: 18px 20px;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.tip-card:hover { border-color: var(--acc-purple); }
+.tip-card--clickable .tip-header { cursor: pointer; }
+.tip-card--clickable .tip-header:hover .tip-expand-hint { opacity: 1; }
+.tip-card--open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent)20;
+}
 .tip-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .tip-title { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.tip-expand-hint {
+  font-size: 0.72rem; color: var(--accent); font-weight: 600;
+  opacity: 0.6; transition: opacity 0.15s; white-space: nowrap;
+}
 .tip-tag {
   font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
   border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;
@@ -431,6 +440,20 @@ body {
   border-left: 2px solid var(--warning);
 }
 .tip-example::before { content: "📌 Esempio: "; font-weight: 700; color: var(--warning); }
+
+/* ── Tip detail (approfondimento AI) ── */
+.tip-detail {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.tip-detail-body {
+  font-size: 0.88rem; color: var(--text); line-height: 1.75;
+  white-space: pre-wrap;
+}
+.tip-detail-loading {
+  font-size: 0.82rem; color: var(--muted); font-style: italic;
+}
 
 /* ============================================================
    ACTIONS

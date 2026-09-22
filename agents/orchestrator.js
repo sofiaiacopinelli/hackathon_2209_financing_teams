@@ -16,6 +16,7 @@ import * as analyzer      from './financial-analyzer.js';
 import * as mortgage      from './mortgage-advisor.js';
 import * as expenses      from './expense-suggester.js';
 import * as quiz          from './quiz-tutor.js';
+import * as tipExplainer  from './tip-explainer.js';
 
 // Mappa dei task type agli agenti disponibili
 const AGENTS = {
@@ -23,6 +24,7 @@ const AGENTS = {
   'mortgage-offer':   mortgage,
   'suggest-expenses': expenses,
   'quiz-feedback':    quiz,
+  'tip-detail':       tipExplainer,
 };
 
 // Descrizioni degli agenti per il prompt di routing automatico
@@ -31,6 +33,7 @@ const AGENT_DESCRIPTIONS = `
 - mortgage-offer: valutazione di un preventivo mutuo (rata, indicatori, giudizio)
 - suggest-expenses: stima delle spese mensili realistiche per un utente (produce JSON)
 - quiz-feedback: feedback su una risposta errata o parziale a una domanda del quiz finanziario
+- tip-detail: approfondimento personalizzato su un concetto finanziario specifico
 `.trim();
 
 /**

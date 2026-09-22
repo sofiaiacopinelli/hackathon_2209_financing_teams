@@ -758,6 +758,14 @@ const app = (() => {
     });
     state.level = getProfile().id;
 
+    // Calcola le aree deboli (passate poi al tip-explainer)
+    const weakAreas = [];
+    if (state.knowledgeScore < 3) weakAreas.push('conoscenza_finanziaria');
+    if (state.lifestyleScore < 3)  weakAreas.push('abitudini_risparmio');
+    if (state.lifestyleScore <= 1) weakAreas.push('gestione_debiti');
+    if (!weakAreas.length)         weakAreas.push('investimenti');
+    state.weakAreas = weakAreas;
+
     // Avvia MarketDataSkill in background: aggiorna i tassi prima che l'utente arrivi al mutuo
     state.marketDataReady = false;
     MarketDataSkill.run().then(result => {
@@ -1077,31 +1085,90 @@ const app = (() => {
     renderActions(savings);
   }
 
+  // Cache degli approfondimenti AI (topic → testo) per non richiamare Claude due volte
+  const _tipDetailCache = {};
+
   function renderTips() {
     const level = state.level || 'principiante';
     const introText = {
-      principiante: "Ecco i 5 concetti fondamentali della finanza personale, spiegati in parole semplici. Capirli ti aiuterà a prendere decisioni migliori con i tuoi soldi.",
-      intermedio: "I concetti chiave con qualche dettaglio in più — le sfumature che ti aiutano a ottimizzare le tue scelte finanziarie.",
-      esperto: "Una sintesi tecnica con focus sulle implicazioni pratiche per la tua strategia finanziaria."
+      principiante: "Clicca su un concetto per un approfondimento personalizzato — spiegato in parole semplici, con esempi dalla tua situazione.",
+      intermedio:   "Clicca su un concetto per un approfondimento AI adattato al tuo profilo e ai tuoi numeri.",
+      esperto:      "Clicca su un concetto per un'analisi tecnica applicata alla tua situazione finanziaria.",
     };
     document.getElementById('tipsIntro').textContent = introText[level];
 
     const grid = document.getElementById('tipsGrid');
     grid.innerHTML = '';
-    Object.values(TIPS).forEach(tip => {
+    Object.entries(TIPS).forEach(([key, tip]) => {
       const content = tip[level];
       const card = document.createElement('div');
-      card.className = 'tip-card';
+      card.className = 'tip-card tip-card--clickable';
       card.style.borderLeftColor = tip.color;
+      card.dataset.tipKey = key;
       card.innerHTML = `
         <div class="tip-header">
           <div class="tip-title">${tip.icon} ${tip.title}</div>
-          <span class="tip-tag" style="background:${tip.color}20;color:${tip.color}">${level}</span>
+          <span class="tip-expand-hint">Approfondisci ↓</span>
         </div>
         <p class="tip-simple">${content.simple}</p>
-        <div class="tip-example">${content.example}</div>`;
+        <div class="tip-example">${content.example}</div>
+        <div class="tip-detail" id="tip-detail-${key}" style="display:none">
+          <div class="tip-detail-body" id="tip-detail-body-${key}"></div>
+        </div>`;
+      card.querySelector('.tip-header').addEventListener('click', () => expandTip(key, tip, card));
       grid.appendChild(card);
     });
+  }
+
+  async function expandTip(key, tip, card) {
+    const detailEl = document.getElementById(`tip-detail-${key}`);
+    const bodyEl   = document.getElementById(`tip-detail-body-${key}`);
+    const hintEl   = card.querySelector('.tip-expand-hint');
+
+    // Toggle chiusura
+    if (detailEl.style.display !== 'none') {
+      detailEl.style.display = 'none';
+      hintEl.textContent = 'Approfondisci ↓';
+      card.classList.remove('tip-card--open');
+      return;
+    }
+
+    // Apertura
+    detailEl.style.display = 'block';
+    hintEl.textContent = 'Chiudi ↑';
+    card.classList.add('tip-card--open');
+
+    // Se già in cache, mostra subito
+    if (_tipDetailCache[key]) {
+      bodyEl.textContent = _tipDetailCache[key];
+      return;
+    }
+
+    // Altrimenti chiama Claude
+    bodyEl.innerHTML = '<span class="tip-detail-loading">⏳ Claude sta preparando un approfondimento per te…</span>';
+
+    try {
+      const res = await fetch(`${SERVER}/tip-detail`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic:      key,
+          level:      state.level || 'principiante',
+          income:     state.income,
+          savings:    monthlySavings(),
+          weak_areas: state.weakAreas || [],
+        }),
+      });
+      const data = await res.json();
+      if (data.ok && data.detail) {
+        _tipDetailCache[key] = data.detail;
+        bodyEl.textContent = data.detail;
+      } else {
+        bodyEl.textContent = 'Approfondimento non disponibile — riprova più tardi.';
+      }
+    } catch {
+      bodyEl.textContent = 'Server non raggiungibile. Avvia il server con npm start in app/server/.';
+    }
   }
 
   function renderActions(savings) {

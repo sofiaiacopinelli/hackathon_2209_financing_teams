@@ -70,6 +70,17 @@ export function registerRoutes(app) {
     }
   });
 
+  app.post('/tip-detail', async (req, res) => {
+    console.log(`\n[/tip-detail] topic="${req.body.topic}" level="${req.body.level}"`);
+    try {
+      const detail = await dispatch('tip-detail', req.body);
+      res.json({ ok: true, detail });
+    } catch (err) {
+      console.error('[/tip-detail] errore:', err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   // Route generica per routing automatico o test senza conoscere il task type
   app.post('/dispatch', async (req, res) => {
     const { task_type = 'auto', ...data } = req.body;
