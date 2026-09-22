@@ -157,17 +157,26 @@ async function renderMortgageActions(status, surplus) {
 }
 
 function formatMortgageCoachOutput(text) {
-  // Converte il formato **N. Titolo**\nTesto in action-item card
-  const blocks = text.split(/\n\s*\n/).filter(b => b.trim());
-  const items = blocks.map((block, i) => {
-    const lines = block.trim().split('\n');
-    const titleLine = lines[0].replace(/^\*\*\d+\.\s*/, '').replace(/\*\*$/, '').trim();
-    const body = lines.slice(1).join(' ').trim();
+  // Trova ogni header **N. Titolo** e raccoglie il corpo tra un header e il successivo
+  const headerRe = /\*\*(\d+)\.\s*([^*\n]+?)\*\*/g;
+  const headers = [];
+  let m;
+  while ((m = headerRe.exec(text)) !== null) {
+    headers.push({ num: m[1], title: m[2].trim(), start: m.index, end: m.index + m[0].length });
+  }
+
+  if (!headers.length) {
+    return `<div style="color:var(--muted);font-size:0.88rem;line-height:1.7">${text.trim()}</div>`;
+  }
+
+  const items = headers.map((h, i) => {
+    const bodyRaw = text.slice(h.end, i + 1 < headers.length ? headers[i + 1].start : text.length);
+    const body = bodyRaw.replace(/^\s*[-—]\s*/, '').trim();
     return `
       <div class="action-item">
-        <div class="action-num">${i + 1}</div>
+        <div class="action-num">${h.num}</div>
         <div class="action-text">
-          <strong>${titleLine}</strong>
+          <strong>${h.title}</strong>
           ${body ? `<span>${body}</span>` : ''}
         </div>
       </div>`;
