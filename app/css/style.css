@@ -515,6 +515,45 @@ body {
 .mt-rata   { color: var(--muted); }
 .mt-note   { font-size: 0.75rem; color: #555; margin-top: 4px; }
 
+/* ── Optimal Mortgage Profile ── */
+#mortgageOptimalSection {
+  background: var(--bg-card); border: 1px solid var(--border);
+  padding: 20px 22px; margin-bottom: 16px;
+}
+.opt-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; flex-wrap: wrap; gap: 6px; }
+.opt-header h3 { font-size: 1rem; font-weight: 700; margin: 0; }
+.opt-source { font-size: 0.72rem; color: var(--muted); font-style: italic; }
+
+.opt-comparisons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+@media (max-width: 550px) { .opt-comparisons { grid-template-columns: 1fr; } }
+
+.opt-cmp-card {
+  background: var(--bg-card2); border: 1px solid var(--border); padding: 14px 16px;
+}
+.opt-cmp-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 10px; }
+.opt-cmp-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.opt-cmp-tag { font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; white-space: nowrap; min-width: 52px; text-align: center; }
+.opt-cmp-tag--you  { background: var(--accent)20; color: var(--accent); }
+.opt-cmp-tag--avg  { background: var(--muted)20;  color: var(--muted); }
+.opt-bar-bg { flex: 1; height: 5px; background: var(--bg-card3); border-radius: 3px; overflow: hidden; }
+.opt-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.opt-cmp-val { font-size: 0.85rem; font-weight: 700; min-width: 70px; text-align: right; }
+.opt-cmp-note { font-size: 0.75rem; color: var(--muted); margin: 6px 0 0; line-height: 1.4; }
+
+.opt-table-wrap { border: 1px solid var(--border); overflow: hidden; }
+.opt-table-title { background: var(--bg-card2); padding: 10px 14px; font-size: 0.82rem; font-weight: 700; border-bottom: 1px solid var(--border); }
+.opt-table-head, .opt-row {
+  display: grid; grid-template-columns: 80px 1fr 1fr 1fr;
+  padding: 9px 14px; gap: 8px; align-items: center; font-size: 0.82rem;
+}
+.opt-table-head { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); background: var(--bg-card2); border-bottom: 1px solid var(--border); }
+.opt-row { border-bottom: 1px solid var(--border); color: var(--muted); }
+.opt-row:last-of-type { border-bottom: none; }
+.opt-row--best { background: var(--accent)08; color: var(--text); font-weight: 600; }
+.opt-anni { font-weight: 700; color: var(--text); }
+.opt-importo { font-weight: 700; }
+.opt-table-note { font-size: 0.72rem; color: var(--muted); padding: 8px 14px; border-top: 1px solid var(--border); background: var(--bg-card2); font-style: italic; }
+
 /* ── Mortgage Simulator ── */
 .mortgage-simulator {
   background: var(--bg-card); border: 1px solid var(--border);

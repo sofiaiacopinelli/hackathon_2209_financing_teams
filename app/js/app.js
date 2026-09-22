@@ -817,8 +817,8 @@ const app = (() => {
     bollette: 110, abbonamenti: 45, shopping: 90, salute: 45, svago: 70, altro: 40
   };
 
-  function goToExpenses() {
-    renderExpenseForm();
+  function goToExpenses(skipRender = false) {
+    if (!skipRender) renderExpenseForm();
 
     // Stima il livello per adattare il subtitle
     let ks = 0, ls = 0;
@@ -1293,7 +1293,110 @@ const app = (() => {
         <b>Durata</b> = più anni hai per restituire, meno paghi ogni mese, ma in totale paghi più interessi.
       </div>` : ''}`;
 
+    renderMortgageOptimal();
     updateMortgageSim();
+  }
+
+  // ── Profilo ottimale mutuo — skill mirrored dal server ──────
+  // Statistiche medie italiane (Banca d'Italia 2023)
+  const IT_MORTGAGE_AVG = {
+    importo:       136000,
+    durata:        24,
+    ltv:           72,
+    rata_reddito:  26,
+    anticipo_pct:  25,
+    reddito_medio: 1850,
+  };
+
+  function renderMortgageOptimal() {
+    const surplus       = monthlySavings();
+    const rataOttimale  = Math.min(state.income * 0.28, Math.max(0, surplus * 0.50));
+    const durazioni     = [15, 20, 25, 30];
+
+    const scenari = durazioni.map(anni => {
+      const importo         = Math.round(calcolaImportoMax(rataOttimale, MARKET_RATES.fisso, anni));
+      const anticipo        = Math.round(importo * IT_MORTGAGE_AVG.anticipo_pct / 100);
+      const rispMensile     = surplus * 0.50;
+      const mesiAnticipo    = rispMensile > 0 ? Math.ceil(anticipo / rispMensile) : null;
+      return { anni, importo, anticipo, anni_anticipo: mesiAnticipo ? Math.round(mesiAnticipo / 12 * 10) / 10 : null };
+    });
+
+    const opt       = scenari.find(s => s.anni === 25) ?? scenari[2];
+    const userPct   = state.income > 0 ? Math.round(rataOttimale / state.income * 100) : 0;
+    const gapImp    = opt.importo - IT_MORTGAGE_AVG.importo;
+    const gapPct    = Math.round(gapImp / IT_MORTGAGE_AVG.importo * 100);
+    const situaz    = rataOttimale <= 0 ? 'danger' : opt.importo >= IT_MORTGAGE_AVG.importo * 0.65 ? 'ok' : 'warning';
+
+    const colors = { ok: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)' };
+
+    // Indicatori di confronto
+    const comparisons = [
+      {
+        label:    '% reddito per rata',
+        user_val: userPct + '%',
+        avg_val:  IT_MORTGAGE_AVG.rata_reddito + '%',
+        user_pct: Math.min(100, userPct / 40 * 100),
+        avg_pct:  Math.min(100, IT_MORTGAGE_AVG.rata_reddito / 40 * 100),
+        user_col: userPct <= 28 ? 'var(--success)' : userPct <= 35 ? 'var(--warning)' : 'var(--danger)',
+        note:     userPct <= 28 ? 'Ottimo — sotto la soglia consigliata' : userPct <= 35 ? 'Accettabile' : 'Elevato — attenzione',
+      },
+      {
+        label:    'Importo accessibile (25 anni)',
+        user_val: fmt(opt.importo),
+        avg_val:  fmt(IT_MORTGAGE_AVG.importo),
+        user_pct: Math.min(100, opt.importo / (IT_MORTGAGE_AVG.importo * 1.5) * 100),
+        avg_pct:  Math.min(100, IT_MORTGAGE_AVG.importo / (IT_MORTGAGE_AVG.importo * 1.5) * 100),
+        user_col: colors[situaz],
+        note:     gapPct >= 0 ? `+${gapPct}% vs media italiana` : `${gapPct}% vs media italiana`,
+      },
+    ];
+
+    // Tabella scenari
+    const tabHtml = scenari.map(s => {
+      const isOpt = s.anni === 25;
+      return `<div class="opt-row${isOpt ? ' opt-row--best' : ''}">
+        <span class="opt-anni">${s.anni} anni${isOpt ? ' ★' : ''}</span>
+        <span class="opt-importo">${fmt(s.importo)}</span>
+        <span class="opt-anticipo">${fmt(s.anticipo)}</span>
+        <span class="opt-tempo">${s.anni_anticipo !== null ? s.anni_anticipo + ' anni risparmio' : '—'}</span>
+      </div>`;
+    }).join('');
+
+    const container = document.getElementById('mortgageOptimalSection');
+    if (!container) return;
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div class="opt-header">
+        <h3>📊 La tua situazione vs la media italiana</h3>
+        <span class="opt-source">Fonte: Banca d'Italia 2023</span>
+      </div>
+
+      <div class="opt-comparisons">
+        ${comparisons.map(c => `
+          <div class="opt-cmp-card">
+            <div class="opt-cmp-label">${c.label}</div>
+            <div class="opt-cmp-row">
+              <span class="opt-cmp-tag opt-cmp-tag--you">Tu</span>
+              <div class="opt-bar-bg"><div class="opt-bar-fill" style="width:${c.user_pct}%;background:${c.user_col}"></div></div>
+              <span class="opt-cmp-val" style="color:${c.user_col}">${c.user_val}</span>
+            </div>
+            <div class="opt-cmp-row">
+              <span class="opt-cmp-tag opt-cmp-tag--avg">Media IT</span>
+              <div class="opt-bar-bg"><div class="opt-bar-fill" style="width:${c.avg_pct}%;background:var(--muted)"></div></div>
+              <span class="opt-cmp-val" style="color:var(--muted)">${c.avg_val}</span>
+            </div>
+            <p class="opt-cmp-note">${c.note}</p>
+          </div>`).join('')}
+      </div>
+
+      <div class="opt-table-wrap">
+        <div class="opt-table-title">🎯 Scenari ottimali per te — rata ${fmt(Math.round(rataOttimale))}/mese</div>
+        <div class="opt-table-head">
+          <span>Durata</span><span>Importo max</span><span>Anticipo (25%)</span><span>Anni per anticipo</span>
+        </div>
+        ${tabHtml}
+        <p class="opt-table-note">★ Scenario consigliato — durata in linea con la media italiana (${IT_MORTGAGE_AVG.durata} anni). Anticipo calcolato al ${IT_MORTGAGE_AVG.anticipo_pct}% del valore immobile.</p>
+      </div>`;
   }
 
   function updateMortgageSim() {

@@ -100,7 +100,7 @@
           </div>
         </div>
         <div class="step-nav" style="margin-top:32px">
-          <button class="btn btn-ghost" onclick="app.showStep('expenses')">← Torna alle spese</button>
+          <button class="btn btn-ghost" onclick="app.goToExpenses(true)">← Torna alle spese</button>
           <button class="btn btn-primary btn-large" onclick="app.goToSimulation()">Simula il mio futuro →</button>
         </div>
       </div>
@@ -110,7 +110,7 @@
     <div class="step" id="step-expenses">
       <div class="step-header">
         <h2>Le tue spese mensili</h2>
-        <p class="step-subtitle">Inserisci una stima delle tue spese medie. Non deve essere perfetta — una cifra approssimativa va benissimo.</p>
+        <p class="step-subtitle">Puoi inserire i valori a mano, usare 📊 per le medie italiane come punto di partenza, oppure chiedere all'AI ✨ di stimarli in base al tuo stipendio e alle risposte che hai dato.</p>
         <div class="avg-actions">
           <button class="btn btn-ghost btn-avg" onclick="app.fillAverageValues()">📊 Usa valori medi italiani</button>
         </div>
@@ -217,6 +217,8 @@
       </div>
 
       <div id="mortgageResultCard"></div>
+
+      <div id="mortgageOptimalSection" style="display:none"></div>
 
       <div class="mortgage-simulator" id="mortgageSimulator">
         <h3>🎛 Simula il tuo mutuo</h3>

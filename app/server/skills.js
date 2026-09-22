@@ -226,6 +226,63 @@ function evaluateMortgageOffer({
   };
 }
 
+// ── optimal_mortgage_profile ─────────────────────────────────
+// Statistiche medie italiane (fonte: Banca d'Italia, Rapporto 2023 + ISTAT)
+const IT_MORTGAGE_AVG = {
+  importo:        136_000,  // importo medio nuovi mutui
+  durata:         24,       // anni medi
+  ltv:            72,       // % LTV medio
+  rata_reddito:   26,       // % del reddito netto
+  anticipo_pct:   25,       // % anticipo tipico (100 - LTV medio)
+  reddito_medio:  1_850,    // reddito netto medio capofamiglia (€/mese)
+};
+
+function optimalMortgageProfile({ income, monthly_savings, savings_accumulated = 0 }) {
+  const inc     = income ?? 0;
+  const surplus = Math.max(0, monthly_savings ?? 0);
+
+  // Rata ottimale: min(28% reddito, 50% surplus) — conservativa ma sostenibile
+  const rataOttimale = Math.min(inc * 0.28, surplus * 0.50);
+
+  const durazioni = [15, 20, 25, 30];
+  const scenari = durazioni.map(anni => {
+    const importo          = Math.round(maxAmount(rataOttimale, MARKET_RATE, anni));
+    const anticipo_target  = Math.round(importo * (IT_MORTGAGE_AVG.anticipo_pct / 100));
+    const risparmio_mensile_utile = surplus * 0.50; // metà del surplus per anticipo
+    const mesi_anticipo    = risparmio_mensile_utile > 0
+      ? Math.ceil(Math.max(0, anticipo_target - savings_accumulated) / risparmio_mensile_utile)
+      : null;
+    return {
+      anni,
+      importo,
+      rata:           Math.round(rataOttimale),
+      anticipo_target,
+      mesi_anticipo,
+      anni_anticipo:  mesi_anticipo !== null ? Math.round(mesi_anticipo / 12 * 10) / 10 : null,
+    };
+  });
+
+  // Scenario preferito: durata più vicina alla media italiana (24 anni → 25)
+  const scenarioOttimale = scenari.find(s => s.anni === 25) ?? scenari[2];
+  const userRataPct = inc > 0 ? Math.round(rataOttimale / inc * 100) : 0;
+  const gapImporto  = scenarioOttimale.importo - IT_MORTGAGE_AVG.importo;
+
+  return {
+    rata_ottimale:     Math.round(rataOttimale),
+    user_rata_pct:     userRataPct,
+    scenari,
+    scenario_ottimale: scenarioOttimale,
+    it_avg:            IT_MORTGAGE_AVG,
+    gap: {
+      importo:          Math.round(gapImporto),
+      importo_pct:      Math.round(gapImporto / IT_MORTGAGE_AVG.importo * 100),
+      durata_vs_media:  scenarioOttimale.anni - IT_MORTGAGE_AVG.durata,
+      rata_pct_vs_media: userRataPct - IT_MORTGAGE_AVG.rata_reddito,
+    },
+    situazione: rataOttimale <= 0 ? 'danger' : scenarioOttimale.importo >= IT_MORTGAGE_AVG.importo * 0.65 ? 'ok' : 'warning',
+  };
+}
+
 // ── Router ───────────────────────────────────────────────────
 const SKILLS = {
   evaluate_quiz: evaluateQuiz,
@@ -234,6 +291,7 @@ const SKILLS = {
   get_tips: getTips,
   propose_mortgage: proposeMortgage,
   evaluate_mortgage_offer: evaluateMortgageOffer,
+  optimal_mortgage_profile: optimalMortgageProfile,
 };
 
 export function runSkill(name, input) {
