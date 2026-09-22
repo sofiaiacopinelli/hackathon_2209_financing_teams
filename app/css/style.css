@@ -336,6 +336,7 @@ body {
 .expense-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .expense-card-icon { font-size: 1.2rem; }
 .expense-card-label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.expense-card-note { font-size: 0.74rem; color: var(--accent); margin: 6px 0 0; line-height: 1.4; }
 
 .expense-input-wrap { display: flex; align-items: center; border: 1px solid var(--border-hi); background: var(--bg-card2); }
 .expense-prefix { padding: 6px 8px; background: var(--bg-card3); color: var(--muted); font-size: 0.8rem; font-weight: 700; border-right: 1px solid var(--border-hi); }

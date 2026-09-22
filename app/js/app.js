@@ -927,9 +927,19 @@ const app = (() => {
   function renderExpenseForm() {
     const grid = document.getElementById('expenseGrid');
     grid.innerHTML = '';
+
+    // Controlla se l'utente ha un mutuo in corso per aggiungere nota contestuale
+    const housingQIdx = QUIZ.findIndex(q => q.key === 'housing');
+    const housing = housingQIdx >= 0 ? state.answers[housingQIdx] : undefined;
+    const hasMortgage = housing === 1;
+
     buildVisibleCategories().forEach(cat => {
       const card = document.createElement('div');
       card.className = 'expense-card';
+      // Se è la voce "affitto" e l'utente ha un mutuo, mostra nota contestuale
+      const note = (cat.id === 'affitto' && hasMortgage)
+        ? `<p class="expense-card-note">💡 Inserisci la rata mensile che paghi oggi alla banca</p>`
+        : '';
       card.innerHTML = `
         <div class="expense-card-header">
           <span class="expense-card-icon">${cat.icon}</span>
@@ -938,7 +948,8 @@ const app = (() => {
         <div class="expense-input-wrap">
           <span class="expense-prefix">€</span>
           <input type="number" min="0" placeholder="${cat.hint}" data-cat="${cat.id}" oninput="app.updateSavings()">
-        </div>`;
+        </div>
+        ${note}`;
       grid.appendChild(card);
     });
   }
@@ -1280,19 +1291,35 @@ const app = (() => {
     const subEl = document.getElementById('evalSubtitle');
     if (subEl) subEl.textContent = evalSubtitles[state.level] || evalSubtitles.principiante;
 
-    // Pre-fill dall'ultimo valore del simulatore, se disponibile
+    // Se l'utente ha un mutuo in corso, pre-compila la rata dall'expense field
+    const housingQIdx = QUIZ.findIndex(q => q.key === 'housing');
+    const housing = housingQIdx >= 0 ? state.answers[housingQIdx] : undefined;
+    const hasMortgage = housing === 1;
+    const currentRata = hasMortgage ? (state.expenses.affitto || 0) : 0;
+
+    const evalRata = document.getElementById('evalRata');
+    if (evalRata && currentRata > 0 && !evalRata.value) {
+      evalRata.value = currentRata;
+    }
+
+    // Pre-fill dall'ultimo valore del simulatore, se disponibile e non già compilato
     const simAmount   = document.getElementById('simAmount');
     const simDuration = document.getElementById('simDuration');
     const simRate     = document.getElementById('simRate');
     if (simAmount && parseFloat(simAmount.value) > 0) {
-      const evalAmount = document.getElementById('evalAmount');
+      const evalAmount   = document.getElementById('evalAmount');
       const evalDuration = document.getElementById('evalDuration');
-      const evalRate = document.getElementById('evalRate');
-      if (evalAmount && !evalAmount.value)   evalAmount.value   = simAmount.value;
+      const evalRate     = document.getElementById('evalRate');
+      if (evalAmount && !evalAmount.value)     evalAmount.value   = simAmount.value;
       if (evalDuration && !evalDuration.value) evalDuration.value = simDuration.value;
-      if (evalRate && !evalRate.value)       evalRate.value     = parseFloat(simRate.value).toFixed(2);
-      runEvaluation();
+      if (evalRate && !evalRate.value)         evalRate.value     = parseFloat(simRate.value).toFixed(2);
     }
+
+    // Se abbiamo abbastanza dati, calcola subito
+    const evalAmount = document.getElementById('evalAmount');
+    const evalDuration = document.getElementById('evalDuration');
+    const evalRateEl = document.getElementById('evalRate');
+    if (evalAmount?.value && evalDuration?.value && evalRateEl?.value) runEvaluation();
 
     showStep('evaluator');
   }
