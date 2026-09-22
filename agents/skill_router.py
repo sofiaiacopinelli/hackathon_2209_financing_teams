@@ -11,12 +11,14 @@ Può essere usato:
 Utilizzo:
     from skill_router import run_skill
 
-    result = run_skill("evaluate_quiz",   {"knowledge_score": 2, "lifestyle_score": 4})
-    result = run_skill("analyze_expenses", {"income": 1800, "expenses": {...}})
-    result = run_skill("run_simulation",   {"monthly_savings": 300})
-    result = run_skill("get_tips",         {"level": "intermedio", "focus_areas": ["investimenti"]})
-    result = run_skill("propose_mortgage", {"income": 2000, "monthly_savings": 400})
-    result = run_skill("evaluate_mortgage_offer", {"income": 2000, "amount": 150000, ...})
+    result = run_skill("evaluate_quiz",           {"knowledge_score": 2, "lifestyle_score": 4})
+    result = run_skill("analyze_expenses",         {"income": 1800, "expenses": {...}})
+    result = run_skill("run_simulation",           {"monthly_savings": 300})
+    result = run_skill("get_tips",                 {"level": "intermedio", "focus_areas": ["investimenti"]})
+    result = run_skill("propose_mortgage",         {"income": 2000, "monthly_savings": 400})
+    result = run_skill("evaluate_mortgage_offer",  {"income": 2000, "amount": 150000, ...})
+    result = run_skill("get_market_rates",         {})
+    result = run_skill("suggest_expenses",         {"profile": {...}, "quiz_lifestyle": [...], "income": 1800, "already_filled": {}, "api_key": "sk-..."})
 """
 
 import sys
@@ -24,12 +26,14 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "skills"))
 
-from quiz_evaluator  import run             as _evaluate_quiz
-from expense_analyzer import run            as _analyze_expenses
-from expense_analyzer import run_simulation as _run_simulation
-from tip_generator   import run             as _get_tips
-from mortgage_advisor import run            as _propose_mortgage
-from mortgage_advisor import evaluate_offer as _evaluate_mortgage_offer
+from quiz_evaluator    import run             as _evaluate_quiz
+from expense_analyzer  import run             as _analyze_expenses
+from expense_analyzer  import run_simulation  as _run_simulation
+from tip_generator     import run             as _get_tips
+from mortgage_advisor  import run             as _propose_mortgage
+from mortgage_advisor  import evaluate_offer  as _evaluate_mortgage_offer
+from market_data       import fetch_rates     as _get_market_rates
+from expense_suggestion import run            as _suggest_expenses
 
 
 # ─────────────────────────────────────────────────────────────
@@ -91,6 +95,22 @@ REGISTRY: dict = {
         ),
         "desc": "Valuta un preventivo bancario: semafori su rata, LTV, competitività tasso",
         "required": ["income", "amount", "duration_years", "rate"],
+    },
+    "get_market_rates": {
+        "fn": lambda _: _get_market_rates(),
+        "desc": "Recupera tassi mutui IT e tasso BCE in tempo reale da BCE SDMX API",
+        "required": [],
+    },
+    "suggest_expenses": {
+        "fn": lambda d: _suggest_expenses(
+            profile=d["profile"],
+            quiz_lifestyle=d.get("quiz_lifestyle", []),
+            income=d.get("income", 0),
+            already_filled=d.get("already_filled", {}),
+            api_key=d["api_key"],
+        ),
+        "desc": "Suggerisce spese mensili personalizzate via Claude basandosi sul profilo quiz",
+        "required": ["profile", "api_key"],
     },
 }
 

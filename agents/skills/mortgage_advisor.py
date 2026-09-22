@@ -7,8 +7,22 @@ evaluate_offer(income, amount, ...)       → semafori su sostenibilità rata, L
 """
 import math
 
-MARKET_RATE_FISSO = 3.5
 DURATIONS = [10, 15, 20, 25, 30]
+
+_FALLBACK_RATE_FISSO = 3.5
+_FALLBACK_RATE_VAR   = 2.8
+
+
+def _get_market_rates() -> tuple[float, float]:
+    """Prova a leggere i tassi live da market_data; fallback ai valori hardcoded."""
+    try:
+        from market_data import fetch_rates
+        data = fetch_rates()
+        fisso = data["fisso"]["value"] if data.get("fisso") else _FALLBACK_RATE_FISSO
+        var   = data["variabile"]["value"] if data.get("variabile") else _FALLBACK_RATE_VAR
+        return fisso, var
+    except Exception:
+        return _FALLBACK_RATE_FISSO, _FALLBACK_RATE_VAR
 
 
 def _monthly_payment(amount: float, annual_rate_pct: float, years: int) -> float:
@@ -29,6 +43,8 @@ def _max_amount(max_payment: float, annual_rate_pct: float, years: int) -> float
 
 def run(income: float, monthly_savings: float) -> dict:
     """Calcola affordability e tabella importi/rate per durata."""
+    rate_fisso, _ = _get_market_rates()
+
     max_rata_30 = income * 0.30
     max_rata_realistic = max(0.0, monthly_savings * 0.50)
     affordability_pct = (max_rata_realistic / income * 100) if income > 0 else 0
@@ -42,8 +58,8 @@ def run(income: float, monthly_savings: float) -> dict:
 
     table = []
     for dur in DURATIONS:
-        max_imp = _max_amount(max_rata_realistic, MARKET_RATE_FISSO, dur)
-        rata = _monthly_payment(max_imp, MARKET_RATE_FISSO, dur)
+        max_imp = _max_amount(max_rata_realistic, rate_fisso, dur)
+        rata = _monthly_payment(max_imp, rate_fisso, dur)
         table.append({
             "years": dur,
             "max_amount": round(max_imp),
@@ -56,7 +72,7 @@ def run(income: float, monthly_savings: float) -> dict:
         "max_rata_30pct_rule": round(max_rata_30),
         "max_rata_realistic": round(max_rata_realistic),
         "affordability_pct": round(affordability_pct, 1),
-        "reference_rate_pct": MARKET_RATE_FISSO,
+        "reference_rate_pct": rate_fisso,
         "table_by_duration": table,
     }
 
@@ -73,6 +89,7 @@ def evaluate_offer(
     rate_type: str = "fisso",
 ) -> dict:
     """Valuta un preventivo bancario con semafori su 3 indicatori."""
+    market_rate_fisso, _ = _get_market_rates()
     computed_payment = _monthly_payment(amount, rate, duration_years)
     ltv = (amount / property_value * 100) if property_value > 0 else None
     payment_pct = (declared_payment / income * 100) if income > 0 and declared_payment > 0 else None
@@ -103,11 +120,11 @@ def evaluate_offer(
         },
         {
             "name": "Competitività tasso",
-            "value": f"{rate:.2f}% (benchmark: {MARKET_RATE_FISSO}%)",
-            "status": traffic_light(rate, MARKET_RATE_FISSO, MARKET_RATE_FISSO + 0.5),
+            "value": f"{rate:.2f}% (benchmark: {market_rate_fisso}%)",
+            "status": traffic_light(rate, market_rate_fisso, market_rate_fisso + 0.5),
             "detail": (
                 "In linea o sotto la media di mercato"
-                if rate <= MARKET_RATE_FISSO
+                if rate <= market_rate_fisso
                 else "Prova a negoziare — sopra la media di mercato"
             ),
         },
@@ -121,7 +138,7 @@ def evaluate_offer(
         suggestions.append("Riduci l'importo o allunga la durata per abbassare la rata mensile.")
     if ltv and ltv > 80:
         suggestions.append("Aumenta l'anticipo per portare l'LTV sotto l'80%.")
-    if rate > MARKET_RATE_FISSO:
+    if rate > market_rate_fisso:
         suggestions.append("Negozia il tasso o confronta offerte di altri istituti.")
 
     return {

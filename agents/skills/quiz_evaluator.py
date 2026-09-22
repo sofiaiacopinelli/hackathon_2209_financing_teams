@@ -12,18 +12,20 @@ Output:
 
 PROFILES = {
     "principiante": {
-        "range": (0, 5),
+        "range": (0, 4),
         "desc": "Stai iniziando il percorso finanziario — ampi margini di miglioramento.",
     },
     "intermedio": {
-        "range": (6, 9),
+        "range": (5, 7),
         "desc": "Buone basi, puoi ottimizzare ulteriormente le tue scelte.",
     },
     "esperto": {
-        "range": (10, 11),
+        "range": (8, 9),
         "desc": "Solida comprensione finanziaria, pronto per strategie avanzate.",
     },
 }
+
+# max knowledge_score = 3, max lifestyle_score = 6, max total = 9
 
 
 def run(knowledge_score: int, lifestyle_score: int) -> dict:
@@ -50,10 +52,10 @@ def run(knowledge_score: int, lifestyle_score: int) -> dict:
         "level": level,
         "description": PROFILES[level]["desc"],
         "total_score": total,
-        "max_score": 9,
+        "max_score": 9,  # 3 knowledge + 6 lifestyle
         "knowledge_score": knowledge_score,
         "lifestyle_score": lifestyle_score,
-        "knowledge_pct": round(knowledge_score / 5 * 100),
+        "knowledge_pct": round(knowledge_score / 3 * 100),
         "lifestyle_pct": round(lifestyle_score / 6 * 100),
         "weak_areas": weak_areas,
     }
