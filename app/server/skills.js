@@ -221,7 +221,7 @@ function evaluateMortgageOffer({
 
 // ── Router ───────────────────────────────────────────────────
 const SKILLS = {
-  evaluate_quiz,
+  evaluate_quiz: evaluateQuiz,
   analyze_expenses: analyzeExpenses,
   run_simulation: runSimulation,
   get_tips: getTips,

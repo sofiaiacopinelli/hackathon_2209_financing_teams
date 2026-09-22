@@ -13,10 +13,14 @@
  *   GET  http://localhost:3000/health          ← health check
  */
 
-import Anthropic from '@anthropic-ai/sdk';
-import express   from 'express';
-import cors      from 'cors';
-import { runSkill } from './skills.js';
+import Anthropic             from '@anthropic-ai/sdk';
+import express               from 'express';
+import cors                  from 'cors';
+import { fileURLToPath }     from 'url';
+import { dirname, join }     from 'path';
+import { runSkill }          from './skills.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Legge ANTHROPIC_API_KEY dall'ambiente (iniettata da Claude Code o da .env)
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -28,6 +32,9 @@ const app    = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Serve l'app statica da app/ (cartella padre del server)
+app.use(express.static(join(__dirname, '..')));
 
 // ── Tool schema (esposto a Claude) ───────────────────────────
 const TOOLS = [
@@ -180,6 +187,7 @@ function buildAnalyzeMessage(d) {
     lines.push(`Contesto vita: ${JSON.stringify(d.lifestyle_context)}`);
   }
   if (d.mortgage_interest) lines.push('Obiettivo: acquisto casa con mutuo');
+  if (d.market_data)       lines.push(`Dati di mercato live: ${d.market_data}`);
   lines.push('', 'Produci un\'analisi personalizzata completa.');
   return lines.join('\n');
 }
@@ -217,6 +225,35 @@ app.post('/mortgage-offer', async (req, res) => {
     res.json({ ok: true, analysis });
   } catch (err) {
     console.error('[/mortgage-offer] errore:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Chiamata one-shot (no tool loop): stima spese personalizzata dal profilo quiz
+app.post('/suggest-expenses', async (req, res) => {
+  console.log('\n[/suggest-expenses] nuova richiesta');
+  try {
+    const d = req.body;
+    const prompt = `Sei un consulente finanziario italiano. Stima spese mensili realistiche per questo profilo.
+
+PROFILO: ${d.level ?? 'principiante'} — reddito €${d.income ?? 0}/mese
+STILE DI VITA (dal quiz): ${d.lifestyle_context ? JSON.stringify(d.lifestyle_context) : '—'}
+VALORI GIÀ INSERITI (preservali esattamente): ${d.already_filled ? JSON.stringify(d.already_filled) : '{}'}
+
+Rispondi SOLO con un oggetto JSON valido, zero testo extra:
+{"affitto":0,"spesa":0,"ristoranti":0,"trasporti":0,"bollette":0,"abbonamenti":0,"shopping":0,"salute":0,"svago":0,"altro":0}`;
+
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 250,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const raw = msg.content[0]?.text?.trim() ?? '{}';
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Risposta AI non riconosciuta');
+    res.json({ ok: true, expenses: JSON.parse(match[0]) });
+  } catch (err) {
+    console.error('[/suggest-expenses] errore:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });

@@ -768,20 +768,11 @@ const app = (() => {
   }
 
   // ── AI Expense Suggestion Skill ──
-  // Legge le risposte del quiz (stile di vita) + i valori già inseriti dall'utente
-  // e chiede a Claude di stimare i valori mancanti in modo personalizzato.
   async function requestExpenseAI() {
-    const apiKey = document.getElementById('expenseApiKeyInput').value.trim();
-    if (!apiKey) {
-      alert('Inserisci una Claude API key per usare il suggerimento AI.');
-      return;
-    }
-
     const btn = document.getElementById('btnExpenseAI');
     btn.textContent = '⏳ Analisi in corso…';
     btn.disabled = true;
 
-    // Raccoglie i valori già inseriti dall'utente
     const alreadyFilled = {};
     document.querySelectorAll('[data-cat]').forEach(inp => {
       const val = parseFloat(inp.value);
@@ -789,94 +780,38 @@ const app = (() => {
     });
     const income = parseFloat(document.getElementById('incomeInput').value) || 0;
 
-    // Costruisce il contesto dal quiz (domande stile di vita e contesto mutuo)
-    const lifestyleCtx = QUIZ.filter(q => q.type === 'lifestyle').map((q, i) => {
-      const qIdx = QUIZ.indexOf(q);
-      const ans = state.answers[qIdx];
-      return ans !== null ? `- ${q.text}: "${q.options[ans]}"` : null;
-    }).filter(Boolean).join('\n');
-
-    const mortgageCtx = QUIZ.filter(q => q.type === 'mortgage_context').map(q => {
-      const qIdx = QUIZ.indexOf(q);
-      const ans = state.answers[qIdx];
-      return ans !== null ? `- ${q.text}: "${q.options[ans]}"` : null;
-    }).filter(Boolean).join('\n');
-
-    const alreadyFilledText = Object.keys(alreadyFilled).length > 0
-      ? Object.entries(alreadyFilled).map(([k, v]) => `- ${k}: €${v}`).join('\n')
-      : '- Nessun valore inserito ancora';
-
-    const incomeNote = income > 0
-      ? `Reddito netto dichiarato: €${income}/mese. Il totale spese non dovrebbe superare €${Math.round(income * 0.88)}.`
-      : 'Reddito non ancora indicato.';
-
-    const prompt = `Sei un consulente finanziario italiano. Devi stimare spese mensili realistiche per un utente in base al suo profilo.
-
-PROFILO UTENTE (dal quiz):
-- Livello finanziario: ${getProfile().title} (${state.level})
-- Conoscenza finanziaria: ${state.knowledgeScore}/3
-- Gestione denaro: ${state.lifestyleScore}/6
-- ${incomeNote}
-
-RISPOSTE DEL QUIZ — stile di vita:
-${lifestyleCtx || '- Non disponibili'}
-
-RISPOSTE DEL QUIZ — obiettivo abitativo:
-${mortgageCtx || '- Non disponibili'}
-
-VALORI GIÀ INSERITI DALL'UTENTE (preservali esattamente):
-${alreadyFilledText}
-
-Stima i valori mensili realistici per questo specifico profilo. Per le categorie già inserite dall'utente usa ESATTAMENTE quei valori. Per le categorie vuote, stima un importo realistico coerente con il profilo e lo stile di vita descritto.
-
-Categorie: affitto, spesa, ristoranti, trasporti, bollette, abbonamenti, shopping, salute, svago, altro.
-
-Rispondi SOLO con un oggetto JSON valido, senza testo prima o dopo:
-{"affitto":0,"spesa":0,"ristoranti":0,"trasporti":0,"bollette":0,"abbonamenti":0,"shopping":0,"salute":0,"svago":0,"altro":0}`;
-
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
+      const res = await fetch(`${SERVER}/suggest-expenses`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: prompt }]
-        })
+          level:             state.level,
+          income,
+          lifestyle_context: state.lifestyleContext,
+          already_filled:    alreadyFilled,
+        }),
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || 'Errore API');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || `HTTP ${res.status}`);
       }
 
-      const data = await response.json();
-      const raw = data.content[0].text.trim();
-      const match = raw.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error('Risposta AI non riconosciuta');
-      const suggested = JSON.parse(match[0]);
-
-      // Applica i valori: i campi già inseriti dall'utente non vengono sovrascritti
+      const data = await res.json();
       document.querySelectorAll('[data-cat]').forEach(inp => {
         const cat = inp.dataset.cat;
-        if (alreadyFilled[cat]) return; // preserva valore utente
-        if (suggested[cat] !== undefined) inp.value = Math.round(suggested[cat]);
+        if (alreadyFilled[cat]) return;
+        if (data.expenses[cat] !== undefined) inp.value = Math.round(data.expenses[cat]);
       });
       updateSavings();
 
       btn.textContent = '✅ Valori suggeriti';
-      setTimeout(() => {
-        btn.textContent = '✨ Suggerisci con AI';
-        btn.disabled = false;
-      }, 2500);
+      setTimeout(() => { btn.textContent = '✨ Suggerisci con AI'; btn.disabled = false; }, 2500);
 
     } catch (err) {
-      alert('Errore suggerimento AI: ' + err.message);
+      const isNetwork = err.message.includes('fetch') || err.message.includes('Failed');
+      if (isNetwork) alert('Server non raggiungibile — avvia il server con npm start in app/server/');
+      else alert('Errore suggerimento AI: ' + err.message);
       btn.textContent = '✨ Suggerisci con AI';
       btn.disabled = false;
     }
@@ -1064,6 +999,7 @@ Rispondi SOLO con un oggetto JSON valido, senza testo prima o dopo:
           lifestyle_context: state.lifestyleContext,
           mortgage_context:  state.mortgageContext,
           mortgage_interest: mortgageInterest,
+          market_data:       state.marketDataSummary || null,
         }),
       });
 
@@ -1336,6 +1272,6 @@ Rispondi SOLO con un oggetto JSON valido, senza testo prima o dopo:
   }
 
   // ── Public API ──
-  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToSimulation, updateSavings, fillAverageValues, showStep, requestAIAnalysis, restart, goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI, requestExpenseAI };
+  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToProfile, goToSimulation, updateSavings, fillAverageValues, showStep, requestAIAnalysis, restart, goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI, requestExpenseAI };
 
 })();
