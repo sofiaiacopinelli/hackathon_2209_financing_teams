@@ -256,22 +256,51 @@ const app = (() => {
   }
 
   // ── Navigazione tra step ──
+  const FLOW_ORDER = ['quiz', 'profile', 'expenses', 'simulation'];
+
   function showStep(id) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     document.getElementById('step-' + id).classList.add('active');
 
-    const order = ['landing', 'quiz', 'profile', 'expenses', 'simulation'];
-    const idx = order.indexOf(id);
-    const bar = document.getElementById('progressBar');
-    const fill = document.getElementById('progressBarFill');
-    if (idx > 0) {
-      bar.style.display = 'block';
-      fill.style.width = (idx / (order.length - 1) * 100) + '%';
+    // Progress bar (thin top line)
+    const allSteps = ['landing', 'quiz', 'profile', 'expenses', 'simulation'];
+    const idx = allSteps.indexOf(id);
+    document.getElementById('progressBarFill').style.width =
+      idx > 0 ? (idx / (allSteps.length - 1) * 100) + '%' : '0%';
+
+    // Step flow indicator
+    const flow = document.getElementById('stepFlow');
+    const flowIdx = FLOW_ORDER.indexOf(id);
+    if (flowIdx < 0) {
+      flow.style.display = 'none';
     } else {
-      bar.style.display = 'none';
+      flow.style.display = 'flex';
+      FLOW_ORDER.forEach((step, i) => {
+        const el = document.getElementById('sf-' + step);
+        if (!el) return;
+        el.classList.remove('sf-active', 'sf-done');
+        if (i === flowIdx) {
+          el.classList.add('sf-active');
+          el.onclick = null;
+        } else if (i < flowIdx) {
+          el.classList.add('sf-done');
+          el.onclick = () => navigateBack(step, flowIdx, i);
+        } else {
+          el.onclick = null;
+        }
+      });
     }
 
     window.scrollTo(0, 0);
+  }
+
+  function navigateBack(targetStep, currentIdx, targetIdx) {
+    if (targetIdx >= currentIdx) return;
+    if (targetStep === 'quiz') {
+      backToQuiz();
+    } else {
+      showStep(targetStep);
+    }
   }
 
   // ── Quiz ──
@@ -315,7 +344,8 @@ const app = (() => {
     document.getElementById('btnNextQ').disabled = saved === null;
     document.getElementById('btnNextQ').textContent =
       state.quizStep === QUIZ.length - 1 ? 'Vedi il mio profilo →' : 'Avanti →';
-    document.getElementById('btnPrevQ').style.visibility = state.quizStep > 0 ? 'visible' : 'hidden';
+    const prevBtn = document.getElementById('btnPrevQ');
+    prevBtn.textContent = state.quizStep === 0 ? '← Home' : '← Indietro';
   }
 
   function selectAnswer(idx) {
@@ -350,7 +380,15 @@ const app = (() => {
     if (state.quizStep > 0) {
       state.quizStep--;
       renderQuestion();
+    } else {
+      showStep('landing');
     }
+  }
+
+  function backToQuiz() {
+    state.quizStep = QUIZ.length - 1;
+    showStep('quiz');
+    renderQuestion();
   }
 
   function computeScores() {
@@ -644,6 +682,6 @@ Usa un linguaggio semplice, adatto al livello "${state.level}". Niente gergo tec
   }
 
   // ── Public API ──
-  return { startQuiz, prevQuestion, nextQuestion, goToExpenses, goToSimulation, updateSavings, showStep, requestAIAnalysis, restart };
+  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToSimulation, updateSavings, showStep, requestAIAnalysis, restart };
 
 })();

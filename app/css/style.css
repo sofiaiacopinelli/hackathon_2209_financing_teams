@@ -49,6 +49,71 @@ body {
   width: 0%;
 }
 
+/* ── Step flow indicator ── */
+.step-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 36px;
+  padding: 14px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sf-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 0;
+  cursor: default;
+  transition: opacity 0.2s;
+  position: relative;
+  opacity: 0.3;
+}
+.sf-item::after {
+  content: '';
+  position: absolute;
+  bottom: -17px; left: 0; right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background 0.3s;
+}
+.sf-item.sf-active {
+  opacity: 1;
+}
+.sf-item.sf-active::after {
+  background: var(--acc-purple);
+}
+.sf-item.sf-done {
+  opacity: 0.55;
+  cursor: pointer;
+}
+.sf-item.sf-done:hover {
+  opacity: 0.9;
+}
+
+.sf-num {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--acc-purple);
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.sf-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text);
+}
+
+.sf-arrow {
+  margin: 0 14px;
+  color: var(--border-hi);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  padding-bottom: 0;
+}
+
 /* ── App container ── */
 .app-container {
   max-width: 700px;
