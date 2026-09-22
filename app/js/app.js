@@ -2,17 +2,36 @@
    FinanzaFacile — App Logic
    ============================================================ */
 
+const MARKET_RATES = { fisso: 3.5, variabile: 2.8, taeg_medio: 4.2 };
+const MORTGAGE_DURATIONS = [10, 15, 20, 25, 30];
+
+function calcolaRata(importo, tassoAnnuo, durataAnni) {
+  const r = tassoAnnuo / 100 / 12;
+  const n = durataAnni * 12;
+  if (r === 0) return importo / n;
+  return importo * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
+function calcolaImportoMax(rataMax, tassoAnnuo, durataAnni) {
+  const r = tassoAnnuo / 100 / 12;
+  const n = durataAnni * 12;
+  if (r === 0) return rataMax * n;
+  return rataMax * (Math.pow(1 + r, n) - 1) / (r * Math.pow(1 + r, n));
+}
+
 const app = (() => {
 
   // ── State ──
   const state = {
     quizStep: 0,
-    answers: new Array(6).fill(null),
+    answers: new Array(8).fill(null),
     knowledgeScore: 0,
     lifestyleScore: 0,
+    mortgageContext: {},
     level: 'principiante',
     income: 0,
     expenses: {},
+    evalData: null,
     chart: null
   };
 
@@ -85,6 +104,28 @@ const app = (() => {
         'Regolarmente: ho un budget e so dove vanno i miei soldi'
       ],
       scores: [0, 1, 2]
+    },
+    // Contesto mutuo (2 domande, non scorinate)
+    {
+      type: 'mortgage_context',
+      category: 'Il tuo obiettivo',
+      text: 'Stai pensando di acquistare casa con un mutuo?',
+      options: [
+        'Sì, è il mio obiettivo principale',
+        'Ci sto pensando, ma non ho ancora deciso',
+        'No, voglio solo capire la mia situazione finanziaria'
+      ]
+    },
+    {
+      type: 'mortgage_context',
+      category: 'Il tuo obiettivo',
+      text: 'Hai già una somma da usare come anticipo (caparra/acconto)?',
+      options: [
+        'No, non ho risparmi sufficienti',
+        'Sì, ho tra €5.000 e €20.000',
+        'Sì, ho più di €20.000',
+        'Non lo so ancora'
+      ]
     }
   ];
 
@@ -256,7 +297,7 @@ const app = (() => {
   }
 
   // ── Navigazione tra step ──
-  const FLOW_ORDER = ['quiz', 'profile', 'expenses', 'simulation'];
+  const FLOW_ORDER = ['quiz', 'profile', 'expenses', 'simulation', 'mortgage'];
 
   function showStep(id) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
@@ -394,11 +435,13 @@ const app = (() => {
   function computeScores() {
     state.knowledgeScore = 0;
     state.lifestyleScore = 0;
+    state.mortgageContext = {};
     QUIZ.forEach((q, i) => {
       const ans = state.answers[i];
       if (ans === null) return;
       if (q.type === 'knowledge' && ans === q.correct) state.knowledgeScore++;
       if (q.type === 'lifestyle') state.lifestyleScore += q.scores[ans];
+      if (q.type === 'mortgage_context') state.mortgageContext[i] = ans;
     });
     state.level = getProfile().id;
   }
@@ -665,12 +708,198 @@ Usa un linguaggio semplice, adatto al livello "${state.level}". Niente gergo tec
     }
   }
 
+  // ── Mutuo Affordability ──
+  function goToMortgage() {
+    renderMortgage();
+    showStep('mortgage');
+  }
+
+  function renderMortgage() {
+    const surplus = monthlySavings();
+    const rataMax30 = state.income * 0.30;
+    const rataMaxReale = Math.max(0, surplus * 0.50);
+    const rataPct = state.income > 0 ? (rataMaxReale / state.income * 100) : 0;
+    const status = rataPct >= 20 ? 'ok' : rataPct >= 10 ? 'warning' : 'danger';
+    const statusLabel = { ok: '✅ Situazione favorevole per un mutuo', warning: '⚠️ Margine limitato — valuta con attenzione', danger: '❌ Da rafforzare prima di accendere un mutuo' };
+
+    document.getElementById('mortgageResultCard').innerHTML = `
+      <div class="mortgage-status ${status}">
+        <div class="ms-icon">${status === 'ok' ? '🏠' : status === 'warning' ? '⚠️' : '🔴'}</div>
+        <div class="ms-body">
+          <strong>${statusLabel[status]}</strong>
+          <span>Rata max realistica: <b>${fmt(rataMaxReale)}/mese</b> &nbsp;|&nbsp; Soglia del 30%: ${fmt(rataMax30)}/mese</span>
+        </div>
+      </div>
+      <div class="mortgage-table">
+        <div class="mt-row header"><span>Durata</span><span>Importo max</span><span>Rata stimata</span></div>
+        ${MORTGAGE_DURATIONS.map(d => {
+          const imp = calcolaImportoMax(rataMaxReale, MARKET_RATES.fisso, d);
+          const rata = calcolaRata(imp, MARKET_RATES.fisso, d);
+          return `<div class="mt-row"><span>${d} anni</span><span class="mt-amount">${fmt(imp)}</span><span class="mt-rata">${fmt(rata)}/mese</span></div>`;
+        }).join('')}
+      </div>
+      <p class="mt-note">* Calcolato con tasso fisso ${MARKET_RATES.fisso}% (riferimento mercato ${new Date().getFullYear()}). Il TAEG effettivo varia per banca.</p>`;
+
+    updateMortgageSim();
+  }
+
+  function updateMortgageSim() {
+    const amount   = parseFloat(document.getElementById('simAmount').value);
+    const duration = parseFloat(document.getElementById('simDuration').value);
+    const rate     = parseFloat(document.getElementById('simRate').value);
+
+    document.getElementById('simAmountLabel').textContent = fmt(amount);
+    document.getElementById('simDurationLabel').textContent = duration + ' anni';
+    document.getElementById('simRateLabel').textContent = rate.toFixed(1) + '%';
+
+    const rata = calcolaRata(amount, rate, duration);
+    const totale = rata * duration * 12;
+    const interessi = totale - amount;
+    const rataVsReddito = state.income > 0 ? (rata / state.income * 100).toFixed(1) : null;
+    const sostenibile = state.income > 0 && rata <= state.income * 0.30;
+
+    document.getElementById('simResult').innerHTML = `
+      <div class="sim-metrics">
+        <div class="sim-metric"><span class="sm-label">Rata mensile</span><span class="sm-val" style="color:${sostenibile ? 'var(--success)' : 'var(--danger)'}">${fmt(rata)}</span></div>
+        <div class="sim-metric"><span class="sm-label">% del tuo reddito</span><span class="sm-val" style="color:${sostenibile ? 'var(--success)' : 'var(--danger)'}">${rataVsReddito ? rataVsReddito + '%' : '—'}</span></div>
+        <div class="sim-metric"><span class="sm-label">Totale restituito</span><span class="sm-val">${fmt(totale)}</span></div>
+        <div class="sim-metric"><span class="sm-label">Di cui interessi</span><span class="sm-val" style="color:var(--warning)">${fmt(interessi)}</span></div>
+      </div>
+      <div style="background:${sostenibile ? 'var(--success-dim)' : 'var(--danger-dim)'}; border-left:3px solid ${sostenibile ? 'var(--success)' : 'var(--danger)'}; padding:12px 16px; margin-top:12px; font-size:0.88rem; color:var(--text)">
+        ${sostenibile ? '✅ Questa rata è sostenibile (< 30% del reddito)' : '⚠️ Questa rata supera il 30% del reddito — rischio elevato'}
+      </div>`;
+  }
+
+  // ── Valutazione Preventivo ──
+  function runEvaluation() {
+    const amount    = parseFloat(document.getElementById('evalAmount').value) || 0;
+    const propValue = parseFloat(document.getElementById('evalPropertyValue').value) || 0;
+    const duration  = parseFloat(document.getElementById('evalDuration').value) || 0;
+    const rate      = parseFloat(document.getElementById('evalRate').value) || 0;
+    const taeg      = parseFloat(document.getElementById('evalTAEG').value) || 0;
+    const rata      = parseFloat(document.getElementById('evalRata').value) || 0;
+    const fees      = parseFloat(document.getElementById('evalFees').value) || 0;
+    const rateType  = document.getElementById('evalRateType').value;
+
+    if (!amount || !duration || !rate) return;
+
+    const ltv = propValue > 0 ? (amount / propValue * 100).toFixed(1) : null;
+    const rataVsReddito = state.income > 0 && rata > 0 ? (rata / state.income * 100).toFixed(1) : null;
+
+    const statusColor = { ok: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)', neutral: '#555' };
+
+    const indicators = [
+      {
+        label: 'Sostenibilità rata',
+        value: rataVsReddito ? rataVsReddito + '% del reddito' : 'Completa il quiz con il tuo reddito',
+        status: !rataVsReddito ? 'neutral' : rataVsReddito < 30 ? 'ok' : rataVsReddito < 40 ? 'warning' : 'danger',
+        detail: !rataVsReddito ? 'Inserisci il reddito nel quiz per vedere questo indicatore' : rataVsReddito < 30 ? 'Ottimo: sotto la soglia del 30%' : rataVsReddito < 40 ? 'Attenzione: tra 30% e 40%, gestibile ma limitante' : 'Pericoloso: supera il 40% del reddito'
+      },
+      {
+        label: 'LTV (Loan To Value)',
+        value: ltv ? ltv + '%' : 'Inserisci il valore dell\'immobile',
+        status: !ltv ? 'neutral' : ltv < 80 ? 'ok' : ltv < 90 ? 'warning' : 'danger',
+        detail: !ltv ? 'Inserisci il valore dell\'immobile per calcolare l\'LTV' : ltv < 80 ? 'Buono: LTV sotto l\'80%, condizioni più favorevoli' : ltv < 90 ? 'Nella media: alcune banche richiedono assicurazione' : 'Alto: difficoltà di approvazione, tassi più alti'
+      },
+      {
+        label: 'Competitività tasso vs mercato',
+        value: rate.toFixed(2) + '% (benchmark: ' + MARKET_RATES.fisso + '%)',
+        status: rate <= MARKET_RATES.fisso ? 'ok' : rate <= MARKET_RATES.fisso + 0.5 ? 'warning' : 'danger',
+        detail: rate <= MARKET_RATES.fisso ? 'Ottimo: in linea o sotto la media di mercato' : rate <= MARKET_RATES.fisso + 0.5 ? 'Leggermente sopra la media — prova a negoziare' : 'Sopra la media di mercato — confronta altri istituti'
+      }
+    ];
+
+    const overallStatus = indicators.some(i => i.status === 'danger') ? 'danger' :
+                          indicators.some(i => i.status === 'warning') ? 'warning' : 'ok';
+    const overallLabel = { ok: '✅ Preventivo complessivamente buono', warning: '⚠️ Preventivo accettabile con riserve', danger: '❌ Preventivo da rivedere o negoziare' };
+
+    document.getElementById('evalResult').style.display = 'block';
+    document.getElementById('evalResult').innerHTML = `
+      <div style="border-left:3px solid ${statusColor[overallStatus]}; background:var(--bg-card); border:1px solid var(--border); padding:16px 20px; margin-bottom:12px">
+        <strong style="font-size:1rem; display:block; margin-bottom:4px">${overallLabel[overallStatus]}</strong>
+        <span style="color:var(--muted); font-size:0.82rem">Tipo: ${rateType} | Durata: ${duration} anni | TAEG dichiarato: ${taeg || '—'}%</span>
+      </div>
+      ${indicators.map(ind => `
+        <div class="eval-indicator" style="border-left:3px solid ${statusColor[ind.status]}">
+          <div class="ei-header">
+            <span class="ei-label">${ind.label}</span>
+            <span class="ei-value" style="color:${statusColor[ind.status]}">${ind.value}</span>
+          </div>
+          <p class="ei-detail">${ind.detail}</p>
+        </div>`).join('')}`;
+
+    document.getElementById('evalAiBanner').style.display = 'flex';
+    state.evalData = { amount, propValue, duration, rate, taeg, rata, fees, rateType, ltv, rataVsReddito, overallStatus };
+  }
+
+  async function requestEvalAI() {
+    const apiKey = document.getElementById('evalApiKeyInput').value.trim();
+    if (!apiKey || !state.evalData) return;
+
+    const btn = document.querySelector('#evalAiBanner .btn-ai');
+    btn.textContent = '⏳ Analisi in corso…';
+    btn.disabled = true;
+
+    const d = state.evalData;
+    const prompt = `Sei un consulente finanziario esperto in mutui italiani.
+Analizza questo preventivo bancario e dai un parere onesto e pratico.
+
+PROFILO UTENTE:
+- Livello finanziario: ${state.level}
+- Reddito mensile: ${fmt(state.income)}
+- Surplus mensile dopo spese: ${fmt(monthlySavings())}
+
+PREVENTIVO:
+- Importo: ${fmt(d.amount)} | Valore immobile: ${d.propValue ? fmt(d.propValue) : 'non indicato'}
+- Durata: ${d.duration} anni | Tipo tasso: ${d.rateType}
+- Tasso nominale: ${d.rate}% | TAEG dichiarato: ${d.taeg || 'non indicato'}%
+- Rata mensile: ${d.rata ? fmt(d.rata) : 'non indicata'} | Spese iniziali: ${fmt(d.fees)}
+- LTV: ${d.ltv || '—'}% | Rata/reddito: ${d.rataVsReddito || '—'}%
+- Valutazione automatica: ${d.overallStatus === 'ok' ? 'positiva' : d.overallStatus === 'warning' ? 'con riserve' : 'negativa'}
+
+Fornisci un'analisi di massimo 200 parole con:
+1. Giudizio complessivo sintetico
+2. Cosa è positivo in questa offerta
+3. Cosa potrebbe essere negoziato o migliorato
+4. Un consiglio specifico prima di firmare
+
+Adatta il linguaggio al livello "${state.level}". Sii diretto e pratico.`;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      document.getElementById('evalAiResultBody').textContent = data.content[0].text;
+      document.getElementById('evalAiResult').style.display = 'block';
+      document.getElementById('evalAiBanner').style.display = 'none';
+    } catch (err) {
+      alert('Errore AI: ' + err.message);
+      btn.textContent = 'Analizza con AI';
+      btn.disabled = false;
+    }
+  }
+
   // ── Reset ──
   function restart() {
     state.quizStep = 0;
-    state.answers = new Array(6).fill(null);
+    state.answers = new Array(8).fill(null);
     state.knowledgeScore = 0;
     state.lifestyleScore = 0;
+    state.mortgageContext = {};
+    state.evalData = null;
     state.level = 'principiante';
     state.income = 0;
     state.expenses = {};
@@ -678,10 +907,13 @@ Usa un linguaggio semplice, adatto al livello "${state.level}". Niente gergo tec
     document.getElementById('aiResult').style.display = 'none';
     document.getElementById('aiBanner').style.display = 'flex';
     document.getElementById('apiKeyInput').value = '';
+    document.getElementById('evalResult').style.display = 'none';
+    document.getElementById('evalAiBanner').style.display = 'none';
+    document.getElementById('evalAiResult').style.display = 'none';
     showStep('landing');
   }
 
   // ── Public API ──
-  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToSimulation, updateSavings, showStep, requestAIAnalysis, restart };
+  return { startQuiz, prevQuestion, nextQuestion, backToQuiz, goToExpenses, goToSimulation, updateSavings, showStep, requestAIAnalysis, restart, goToMortgage, updateMortgageSim, runEvaluation, requestEvalAI };
 
 })();

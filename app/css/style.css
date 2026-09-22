@@ -424,3 +424,70 @@ body {
   .api-key-input { width: 100%; }
   .income-label-text { font-size: 0.82rem; }
 }
+
+/* ============================================================
+   MORTGAGE AFFORDABILITY
+   ============================================================ */
+.mortgage-status {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  padding: 18px 20px; margin-bottom: 12px;
+}
+.mortgage-status.ok     { border-left: 3px solid var(--success); }
+.mortgage-status.warning{ border-left: 3px solid var(--warning); }
+.mortgage-status.danger { border-left: 3px solid var(--danger);  }
+.ms-icon { font-size: 1.8rem; flex-shrink: 0; }
+.ms-body strong { display: block; font-size: 0.95rem; margin-bottom: 4px; }
+.ms-body span   { font-size: 0.85rem; color: var(--muted); }
+
+.mortgage-table { background: var(--bg-card); border: 1px solid var(--border); margin-bottom: 8px; }
+.mt-row {
+  display: grid; grid-template-columns: 1fr 1.5fr 1fr;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 0.85rem;
+}
+.mt-row:last-child { border-bottom: none; }
+.mt-row.header  { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.mt-amount { color: var(--acc-purple); font-weight: 700; }
+.mt-rata   { color: var(--muted); }
+.mt-note   { font-size: 0.75rem; color: #555; margin-top: 4px; }
+
+/* ── Mortgage Simulator ── */
+.mortgage-simulator {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-top: 2px solid var(--acc-purple);
+  padding: 20px 24px; margin-top: 16px;
+}
+.mortgage-simulator h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 16px; }
+.sim-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.sim-row label { font-size: 0.82rem; color: var(--muted); }
+.sim-row input[type=range] { width: 100%; accent-color: var(--acc-purple); }
+.sim-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+.sim-metric {
+  background: var(--bg-card2); border: 1px solid var(--border);
+  padding: 12px 14px;
+}
+.sm-label {
+  display: block; font-size: 0.7rem; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+}
+.sm-val { font-size: 1.2rem; font-weight: 700; color: var(--acc-purple); }
+
+/* ============================================================
+   PREVENTIVO EVALUATOR
+   ============================================================ */
+.eval-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+@media (max-width: 500px) { .eval-grid { grid-template-columns: 1fr; } }
+
+.eval-field label {
+  display: block; font-size: 0.78rem; color: var(--muted);
+  margin-bottom: 6px; font-weight: 600;
+}
+
+.eval-indicator {
+  background: var(--bg-card); border: 1px solid var(--border);
+  padding: 14px 16px; margin-bottom: 8px;
+}
+.ei-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.ei-label  { font-size: 0.85rem; font-weight: 600; }
+.ei-value  { font-size: 0.85rem; font-weight: 700; }
+.ei-detail { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }

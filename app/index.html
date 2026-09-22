@@ -37,6 +37,11 @@
         <span class="sf-num">04</span>
         <span class="sf-label">Risultato</span>
       </div>
+      <div class="sf-arrow">→</div>
+      <div class="sf-item" id="sf-mortgage">
+        <span class="sf-num">05</span>
+        <span class="sf-label">Mutuo</span>
+      </div>
     </nav>
 
     <!-- ══ STEP 0: Landing ══ -->
@@ -194,6 +199,129 @@
 
       <div class="step-nav" style="margin-top:32px">
         <button class="btn btn-ghost" onclick="app.showStep('expenses')">← Torna alle spese</button>
+        <button class="btn btn-primary" onclick="app.goToMortgage()">Calcola mutuo →</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 5: Mutuo ══ -->
+    <div class="step" id="step-mortgage">
+      <div class="step-header">
+        <h2>Che mutuo puoi permetterti?</h2>
+        <p class="step-subtitle">Basato sul tuo reddito e le tue spese, ecco cosa dicono i numeri</p>
+      </div>
+
+      <div id="mortgageResultCard"></div>
+
+      <div class="mortgage-simulator" id="mortgageSimulator">
+        <h3>🎛 Simula il tuo mutuo</h3>
+        <div class="sim-row">
+          <label>Importo richiesto: <strong id="simAmountLabel">€ 100.000</strong></label>
+          <input type="range" id="simAmount" min="20000" max="500000" step="5000" value="100000" oninput="app.updateMortgageSim()">
+        </div>
+        <div class="sim-row">
+          <label>Durata: <strong id="simDurationLabel">20 anni</strong></label>
+          <input type="range" id="simDuration" min="5" max="30" step="5" value="20" oninput="app.updateMortgageSim()">
+        </div>
+        <div class="sim-row">
+          <label>Tasso annuo: <strong id="simRateLabel">3.5%</strong></label>
+          <input type="range" id="simRate" min="1" max="8" step="0.1" value="3.5" oninput="app.updateMortgageSim()">
+        </div>
+        <div id="simResult"></div>
+      </div>
+
+      <div class="step-nav" style="margin-top:32px">
+        <button class="btn btn-ghost" onclick="app.showStep('simulation')">← Torna alla simulazione</button>
+        <button class="btn btn-primary" onclick="app.showStep('evaluator')">Ho già un preventivo →</button>
+      </div>
+      <div style="text-align:center; margin-top:12px">
+        <button class="btn btn-ghost" onclick="app.restart()" style="font-size:0.8rem">Ricomincia dall'inizio 🔄</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 6: Valuta Preventivo [Opzionale] ══ -->
+    <div class="step" id="step-evaluator">
+      <div class="step-header">
+        <div class="step-badge">Opzionale</div>
+        <h2>Valuta il tuo preventivo</h2>
+        <p class="step-subtitle">Hai già ricevuto un'offerta dalla banca? Inserisci i dati e ti diciamo se è adatta a te.</p>
+      </div>
+
+      <div class="eval-grid">
+        <div class="eval-field">
+          <label>Importo richiesto</label>
+          <div class="input-group"><span class="input-prefix">€</span>
+            <input type="number" id="evalAmount" placeholder="150000" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>Valore immobile</label>
+          <div class="input-group"><span class="input-prefix">€</span>
+            <input type="number" id="evalPropertyValue" placeholder="200000" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>Durata (anni)</label>
+          <div class="input-group"><span class="input-prefix">yr</span>
+            <input type="number" id="evalDuration" placeholder="25" min="5" max="30" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>Tasso nominale annuo</label>
+          <div class="input-group"><span class="input-prefix">%</span>
+            <input type="number" id="evalRate" placeholder="3.5" step="0.1" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>TAEG dichiarato</label>
+          <div class="input-group"><span class="input-prefix">%</span>
+            <input type="number" id="evalTAEG" placeholder="4.2" step="0.1" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>Rata mensile (dichiarata)</label>
+          <div class="input-group"><span class="input-prefix">€</span>
+            <input type="number" id="evalRata" placeholder="820" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>Spese iniziali totali</label>
+          <div class="input-group"><span class="input-prefix">€</span>
+            <input type="number" id="evalFees" placeholder="2500" oninput="app.runEvaluation()">
+          </div>
+        </div>
+        <div class="eval-field">
+          <label>Tipo tasso</label>
+          <select id="evalRateType" onchange="app.runEvaluation()" style="padding:9px 12px; background:var(--bg-card2); color:var(--text); border:1px solid var(--border-hi); font-family:inherit; font-size:0.9rem; width:100%; outline:none;">
+            <option value="fisso">Fisso</option>
+            <option value="variabile">Variabile</option>
+            <option value="misto">Misto</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="evalResult" style="display:none"></div>
+
+      <div class="ai-banner" id="evalAiBanner" style="display:none">
+        <div class="ai-banner-left">
+          <span class="ai-icon">🤖</span>
+          <div>
+            <strong>Analisi AI del preventivo</strong>
+            <span>Claude analizza l'offerta e ti dice cosa negoziare</span>
+          </div>
+        </div>
+        <div class="ai-banner-right">
+          <input type="password" id="evalApiKeyInput" placeholder="sk-ant-..." class="api-key-input">
+          <button class="btn btn-ai" onclick="app.requestEvalAI()">Analizza con AI</button>
+        </div>
+      </div>
+
+      <div class="ai-result" id="evalAiResult" style="display:none">
+        <div class="ai-result-header"><span>🤖</span> <strong>Parere AI — Claude</strong></div>
+        <div class="ai-result-body" id="evalAiResultBody"></div>
+      </div>
+
+      <div class="step-nav" style="margin-top:32px">
+        <button class="btn btn-ghost" onclick="app.showStep('mortgage')">← Torna all'affordability</button>
         <button class="btn btn-primary" onclick="app.restart()">Ricomincia 🔄</button>
       </div>
     </div>
