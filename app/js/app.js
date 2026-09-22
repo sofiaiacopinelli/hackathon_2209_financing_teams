@@ -822,76 +822,48 @@ const app = (() => {
       </div>`).join('');
   }
 
-  // ── Analisi AI (Claude API) ──
-  async function requestAIAnalysis() {
-    const apiKey = document.getElementById('apiKeyInput').value.trim();
-    if (!apiKey) {
-      alert('Inserisci una Claude API key per usare l\'analisi AI.');
-      return;
-    }
+  // ── Analisi AI (server Node locale) ──
+  const SERVER = 'http://localhost:3000';
 
-    const btn = document.querySelector('.btn-ai');
+  async function requestAIAnalysis() {
+    const btn = document.querySelector('#aiBanner .btn-ai');
     btn.textContent = '⏳ Analisi in corso…';
     btn.disabled = true;
 
-    const profile = getProfile();
-    const savings = monthlySavings();
-    const expenses = state.expenses;
-
-    const prompt = `Sei un consulente finanziario che parla in modo semplice e diretto con persone comuni.
-
-L'utente ha completato un questionario sulla sua situazione finanziaria. Ecco i dati:
-
-PROFILO: ${profile.title} (livello: ${state.level})
-- Conoscenza finanziaria: ${state.knowledgeScore}/3
-- Gestione denaro: ${state.lifestyleScore}/6
-
-SITUAZIONE ECONOMICA MENSILE:
-- Entrate nette: ${fmt(state.income)}
-- Uscite totali: ${fmt(totalExpenses())}
-- Risparmio mensile: ${fmt(savings)}
-
-DETTAGLIO SPESE:
-${Object.entries(expenses).filter(([,v]) => v > 0).map(([k, v]) => `- ${k}: ${fmt(v)}`).join('\n')}
-
-Fornisci un'analisi personalizzata di massimo 200 parole che:
-1. Valuti brevemente la situazione dell'utente (tono positivo e incoraggiante)
-2. Evidenzi 1-2 punti di forza
-3. Suggerisca 1-2 aree concrete di miglioramento con numeri specifici
-4. Concluda con un messaggio motivante
-
-Usa un linguaggio semplice, adatto al livello "${state.level}". Niente gergo tecnico eccessivo. Sii diretto e pratico.`;
+    const mortgageInterest = Object.values(state.mortgageContext ?? {}).some(v => v === 0);
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
+      const res = await fetch(`${SERVER}/analyze`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 400,
-          messages: [{ role: 'user', content: prompt }]
-        })
+          knowledge_score:   state.knowledgeScore,
+          lifestyle_score:   state.lifestyleScore,
+          income:            state.income,
+          expenses:          state.expenses,
+          lifestyle_context: state.lifestyleContext,
+          mortgage_context:  state.mortgageContext,
+          mortgage_interest: mortgageInterest,
+        }),
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || 'Errore API');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || `HTTP ${res.status}`);
       }
 
-      const data = await response.json();
-      const text = data.content[0].text;
-
-      document.getElementById('aiResultBody').textContent = text;
+      const data = await res.json();
+      document.getElementById('aiResultBody').textContent = data.analysis;
       document.getElementById('aiResult').style.display = 'block';
       document.getElementById('aiBanner').style.display = 'none';
 
     } catch (err) {
-      alert('Errore durante l\'analisi AI: ' + err.message);
+      const isNetwork = err.message.includes('fetch') || err.message.includes('Failed') || err.message.includes('NetworkError');
+      if (isNetwork) {
+        alert('Server non raggiungibile.\n\nAvvia il server dal terminale di Claude Code:\n  cd server\n  npm install\n  npm start');
+      } else {
+        alert('Errore analisi AI: ' + err.message);
+      }
       btn.textContent = 'Analizza con AI';
       btn.disabled = false;
     }
@@ -1022,60 +994,49 @@ Usa un linguaggio semplice, adatto al livello "${state.level}". Niente gergo tec
   }
 
   async function requestEvalAI() {
-    const apiKey = document.getElementById('evalApiKeyInput').value.trim();
-    if (!apiKey || !state.evalData) return;
+    if (!state.evalData) return;
 
     const btn = document.querySelector('#evalAiBanner .btn-ai');
     btn.textContent = '⏳ Analisi in corso…';
     btn.disabled = true;
 
     const d = state.evalData;
-    const prompt = `Sei un consulente finanziario esperto in mutui italiani.
-Analizza questo preventivo bancario e dai un parere onesto e pratico.
-
-PROFILO UTENTE:
-- Livello finanziario: ${state.level}
-- Reddito mensile: ${fmt(state.income)}
-- Surplus mensile dopo spese: ${fmt(monthlySavings())}
-
-PREVENTIVO:
-- Importo: ${fmt(d.amount)} | Valore immobile: ${d.propValue ? fmt(d.propValue) : 'non indicato'}
-- Durata: ${d.duration} anni | Tipo tasso: ${d.rateType}
-- Tasso nominale: ${d.rate}% | TAEG dichiarato: ${d.taeg || 'non indicato'}%
-- Rata mensile: ${d.rata ? fmt(d.rata) : 'non indicata'} | Spese iniziali: ${fmt(d.fees)}
-- LTV: ${d.ltv || '—'}% | Rata/reddito: ${d.rataVsReddito || '—'}%
-- Valutazione automatica: ${d.overallStatus === 'ok' ? 'positiva' : d.overallStatus === 'warning' ? 'con riserve' : 'negativa'}
-
-Fornisci un'analisi di massimo 200 parole con:
-1. Giudizio complessivo sintetico
-2. Cosa è positivo in questa offerta
-3. Cosa potrebbe essere negoziato o migliorato
-4. Un consiglio specifico prima di firmare
-
-Adatta il linguaggio al livello "${state.level}". Sii diretto e pratico.`;
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
+      const res = await fetch(`${SERVER}/mortgage-offer`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 400,
-          messages: [{ role: 'user', content: prompt }]
-        })
+          level:             state.level,
+          income:            state.income,
+          monthly_savings:   monthlySavings(),
+          amount:            d.amount,
+          property_value:    d.propValue ?? 0,
+          duration_years:    d.duration,
+          rate:              d.rate,
+          taeg:              d.taeg ?? 0,
+          declared_payment:  d.rata ?? 0,
+          fees:              d.fees ?? 0,
+          rate_type:         d.rateType ?? 'fisso',
+        }),
       });
 
-      const data = await response.json();
-      document.getElementById('evalAiResultBody').textContent = data.content[0].text;
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      document.getElementById('evalAiResultBody').textContent = data.analysis;
       document.getElementById('evalAiResult').style.display = 'block';
       document.getElementById('evalAiBanner').style.display = 'none';
     } catch (err) {
-      alert('Errore AI: ' + err.message);
+      const isNetwork = err.message.includes('fetch') || err.message.includes('Failed') || err.message.includes('NetworkError');
+      if (isNetwork) {
+        alert('Server non raggiungibile.\n\nAvvia il server dal terminale di Claude Code:\n  cd app/server\n  npm install\n  npm start');
+      } else {
+        alert('Errore AI: ' + err.message);
+      }
       btn.textContent = 'Analizza con AI';
       btn.disabled = false;
     }
@@ -1095,7 +1056,6 @@ Adatta il linguaggio al livello "${state.level}". Sii diretto e pratico.`;
     if (state.chart) { state.chart.destroy(); state.chart = null; }
     document.getElementById('aiResult').style.display = 'none';
     document.getElementById('aiBanner').style.display = 'flex';
-    document.getElementById('apiKeyInput').value = '';
     document.getElementById('evalResult').style.display = 'none';
     document.getElementById('evalAiBanner').style.display = 'none';
     document.getElementById('evalAiResult').style.display = 'none';
