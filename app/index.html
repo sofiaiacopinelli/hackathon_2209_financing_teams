@@ -113,7 +113,6 @@
         <p class="step-subtitle">Inserisci una stima delle tue spese medie. Non deve essere perfetta — una cifra approssimativa va benissimo.</p>
         <div class="avg-actions">
           <button class="btn btn-ghost btn-avg" onclick="app.fillAverageValues()">📊 Usa valori medi italiani</button>
-          <button class="btn btn-ai btn-avg-ai" id="btnExpenseAI" onclick="app.requestExpenseAI()">✨ Suggerisci con AI</button>
         </div>
       </div>
 
@@ -127,6 +126,9 @@
             <span class="input-prefix">€</span>
             <input type="number" id="incomeInput" placeholder="1800" min="0" oninput="app.updateSavings()">
           </div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn btn-ai btn-avg-ai" id="btnExpenseAI" onclick="app.requestExpenseAI()" disabled>✨ Suggerisci spese con AI</button>
         </div>
       </div>
 

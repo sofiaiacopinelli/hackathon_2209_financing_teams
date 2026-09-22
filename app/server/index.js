@@ -217,6 +217,29 @@ app.post('/mortgage-offer', async (req, res) => {
   }
 });
 
+app.post('/quiz-feedback', async (req, res) => {
+  const { question, options, selected_idx, correct_idx, answer_type } = req.body;
+  const selected = options?.[selected_idx] ?? '';
+  const correct  = options?.[correct_idx]  ?? '';
+
+  const prompt = [
+    `Sei un tutor di educazione finanziaria. Un utente ha risposto in modo ${answer_type === 'partial' ? 'parzialmente corretto' : 'errato'} a una domanda.`,
+    ``,
+    `Domanda: "${question}"`,
+    `Risposta selezionata: "${selected}"`,
+    `Risposta corretta: "${correct}"`,
+    ``,
+    `Scrivi una spiegazione in italiano di massimo 2 frasi: prima spiega brevemente perche' la risposta scelta e' ${answer_type === 'partial' ? 'incompleta' : 'sbagliata'}, poi indica cosa c'e' da sapere. Tono incoraggiante, linguaggio semplice, niente gergo tecnico.`,
+  ].join('\n');
+
+  try {
+    const feedback = await callClaude(prompt);
+    res.json({ ok: true, feedback });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.post('/suggest-expenses', async (req, res) => {
   console.log('\n[/suggest-expenses] richiesta ricevuta');
   try {

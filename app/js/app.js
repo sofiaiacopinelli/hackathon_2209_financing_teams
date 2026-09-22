@@ -625,17 +625,48 @@ const app = (() => {
     const icons     = { correct: '✅', partial: '🟡', wrong: '❌' };
     const labels    = { correct: 'Esatto!', partial: 'Quasi — ma non del tutto', wrong: 'Non è corretto' };
 
+    const existing = document.getElementById('quizFeedback');
+    if (existing) existing.remove();
+
     const fb = document.createElement('div');
     fb.id = 'quizFeedback';
     fb.className = `quiz-feedback fb-${type}`;
+
+    // Testo statico come fallback immediato
+    const staticText = q.feedback?.[type] ?? '';
     fb.innerHTML = `
       <div class="fb-header">
         <span class="fb-icon">${icons[type]}</span>
         <strong class="fb-label">${labels[type]}</strong>
       </div>
-      <p class="fb-text">${q.feedback[type]}</p>`;
+      <p class="fb-text" id="fbText">${staticText || '⏳ Analisi in corso…'}</p>`;
 
     document.getElementById('optionsList').after(fb);
+
+    // Feedback dinamico via Claude (solo per risposte non corrette)
+    if (!isCorrect) {
+      fetch(`${SERVER}/quiz-feedback`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question:        q.text,
+          options:         q.options,
+          selected_idx:    selectedIdx,
+          correct_idx:     q.correct,
+          answer_type:     type,
+        }),
+      })
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById('fbText');
+        if (el && data.feedback) el.textContent = data.feedback;
+      })
+      .catch(() => {
+        // Se il server non risponde, resta il testo statico
+        const el = document.getElementById('fbText');
+        if (el && !el.textContent.trim()) el.textContent = staticText;
+      });
+    }
   }
 
   function selectAnswer(idx) {
@@ -872,6 +903,9 @@ const app = (() => {
     } else {
       preview.style.display = 'none';
     }
+
+    const aiBtn = document.getElementById('btnExpenseAI');
+    if (aiBtn) aiBtn.disabled = state.income <= 0;
   }
 
   // ── Simulazione ──
