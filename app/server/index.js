@@ -24,6 +24,34 @@ import { runSkill, setMarketRates } from './skills.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
+// ── Istruzioni di stile per livello ─────────────────────────
+const LEVEL_STYLE = {
+  principiante: `
+REGOLE DI LINGUAGGIO (livello principiante — priorità assoluta):
+- Usa analogie della vita quotidiana (es. "come un salvadanaio", "come pagare l'affitto")
+- Spiega ogni termine tecnico la prima volta che lo usi, tra parentesi (es. "TAEG (cioè il costo reale totale del prestito)")
+- Frasi brevi. Un concetto per frase.
+- Usa cifre concrete: "€200 al mese" invece di "un tasso di risparmio del 10%"
+- Tono: amico che spiega, non esperto che valuta
+- Evita: rendimento annualizzato, asset allocation, LTV, spread, Euribor (se li usi, spiegali)`,
+
+  intermedio: `
+REGOLE DI LINGUAGGIO (livello intermedio):
+- Puoi usare TAEG, inflazione, rendimento, diversificazione senza spiegarli
+- Spiega solo i concetti meno noti (es. LTV, PAC, ETF)
+- Dai numeri concreti e percentuali
+- Tono: consulente pragmatico
+- Fai 1-2 confronti con situazioni reali o medie di mercato`,
+
+  esperto: `
+REGOLE DI LINGUAGGIO (livello esperto):
+- Linguaggio tecnico diretto: LTV, TAEG, Euribor, spread, asset allocation, PAC, ETF
+- Dati precisi con 1-2 decimali dove utile
+- Confronta con benchmark di mercato
+- Niente spiegazioni di base — l'utente le conosce già
+- Tono: peer review tra professionisti`,
+};
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(join(__dirname, '..')));
@@ -87,8 +115,10 @@ function buildAnalyzePrompt(d) {
     ? skill('propose_mortgage', { income: d.income ?? 0, monthly_savings: exp.monthly_savings })
     : null;
 
+  const levelStyle = LEVEL_STYLE[quiz.level] || LEVEL_STYLE.principiante;
   const parts = [
-    `Sei un consulente finanziario personale. Scrivi un'analisi in italiano, max 280 parole, tono positivo e concreto. Adatta il linguaggio al livello "${quiz.level}".`,
+    `Sei un consulente finanziario personale. Scrivi un'analisi in italiano, max 280 parole, tono positivo e concreto.`,
+    levelStyle,
     '',
     `PROFILO UTENTE`,
     `- Livello: ${quiz.level} (score ${quiz.total_score}/${quiz.max_score})`,
@@ -146,8 +176,10 @@ function buildMortgagePrompt(d) {
     rate_type:        d.rate_type ?? 'fisso',
   });
 
+  const levelStyle = LEVEL_STYLE[d.level] || LEVEL_STYLE.principiante;
   const parts = [
-    `Sei un consulente mutui italiano. Esprimi un parere in italiano, max 200 parole, linguaggio chiaro per un "${d.level ?? 'principiante'}".`,
+    `Sei un consulente mutui italiano. Esprimi un parere in italiano, max 200 parole.`,
+    levelStyle,
     '',
     `PREVENTIVO ANALIZZATO`,
     `- Importo: €${d.amount} | Durata: ${d.duration_years} anni | Tipo: ${d.rate_type ?? 'fisso'}`,
@@ -178,7 +210,7 @@ function buildSuggestPrompt(d) {
   }
 
   return [
-    `Sei un consulente finanziario italiano. Stima le spese mensili realistiche per questo utente.`,
+    `Sei un consulente finanziario italiano. Stima le spese mensili realistiche per questo utente in base al suo profilo.`,
     `Profilo: ${d.level ?? 'principiante'}, reddito €${d.income ?? 0}/mese`,
     ctxLines.length ? `Risposte dal quiz:\n${ctxLines.join('\n')}` : '',
     `Valori gia' inseriti dall'utente (NON modificare): ${filled}`,
@@ -222,14 +254,18 @@ app.post('/quiz-feedback', async (req, res) => {
   const selected = options?.[selected_idx] ?? '';
   const correct  = options?.[correct_idx]  ?? '';
 
+  const level = req.body.level ?? 'principiante';
+  const levelStyle = LEVEL_STYLE[level] || LEVEL_STYLE.principiante;
+
   const prompt = [
     `Sei un tutor di educazione finanziaria. Un utente ha risposto in modo ${answer_type === 'partial' ? 'parzialmente corretto' : 'errato'} a una domanda.`,
+    levelStyle,
     ``,
     `Domanda: "${question}"`,
     `Risposta selezionata: "${selected}"`,
     `Risposta corretta: "${correct}"`,
     ``,
-    `Scrivi una spiegazione in italiano di massimo 2 frasi: prima spiega brevemente perche' la risposta scelta e' ${answer_type === 'partial' ? 'incompleta' : 'sbagliata'}, poi indica cosa c'e' da sapere. Tono incoraggiante, linguaggio semplice, niente gergo tecnico.`,
+    `Scrivi una spiegazione in italiano di massimo 2 frasi: prima spiega perche' la risposta e' ${answer_type === 'partial' ? 'incompleta' : 'sbagliata'}, poi spiega cosa bisogna sapere. Tono incoraggiante.`,
   ].join('\n');
 
   try {

@@ -645,6 +645,17 @@ const app = (() => {
 
     // Feedback dinamico via Claude (solo per risposte non corrette)
     if (!isCorrect) {
+      // Stima il livello corrente dai punteggi parziali durante il quiz
+      let ks = 0, ls = 0;
+      QUIZ.forEach((qz, i) => {
+        const ans = state.answers[i];
+        if (ans == null) return;
+        if (qz.type === 'lifestyle') ls += (qz.scores?.[ans] ?? 0);
+        if (qz.type === 'knowledge' && ans === qz.correct) ks++;
+      });
+      const t = ks + ls;
+      const currentLevel = t >= 10 ? 'esperto' : t >= 6 ? 'intermedio' : 'principiante';
+
       fetch(`${SERVER}/quiz-feedback`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -654,6 +665,7 @@ const app = (() => {
           selected_idx:    selectedIdx,
           correct_idx:     q.correct,
           answer_type:     type,
+          level:           currentLevel,
         }),
       })
       .then(r => r.json())
@@ -788,6 +800,26 @@ const app = (() => {
 
   function goToExpenses() {
     renderExpenseForm();
+
+    // Stima il livello per adattare il subtitle
+    let ks = 0, ls = 0;
+    QUIZ.forEach((q, i) => {
+      const ans = state.answers[i];
+      if (ans == null) return;
+      if (q.type === 'lifestyle') ls += (q.scores?.[ans] ?? 0);
+      if (q.type === 'knowledge' && ans === q.correct) ks++;
+    });
+    const t = ks + ls;
+    const estLevel = t >= 10 ? 'esperto' : t >= 6 ? 'intermedio' : 'principiante';
+
+    const expSubtitles = {
+      principiante: "Quanto spendi al mese? Puoi inserire i valori a mano, usare 📊 per le medie italiane come punto di partenza, oppure chiedere all'AI ✨ di stimarli in base al tuo stipendio e alle risposte che hai dato.",
+      intermedio:   "Inserisci le tue spese mensili. Puoi usare i valori medi ISTAT come benchmark (📊), oppure lasciare che l'AI ✨ stimi le voci in base al tuo profilo e reddito.",
+      esperto:      "Imposta il tuo cash-flow mensile. Valori medi di riferimento disponibili via 📊 (fonte ISTAT). L'AI ✨ può stimare le voci dal tuo reddito e profilo per un benchmark personalizzato.",
+    };
+    const subEl = document.querySelector('#step-expenses .step-subtitle');
+    if (subEl) subEl.textContent = expSubtitles[estLevel] || expSubtitles.principiante;
+
     showStep('expenses');
   }
 
@@ -915,6 +947,15 @@ const app = (() => {
   }
 
   function renderSimulation() {
+    // Aggiorna il subtitle in base al livello
+    const simSubtitles = {
+      principiante: "Ecco cosa succede ai tuoi risparmi nei prossimi 20 anni: tenerli fermi, metterli in un conto deposito, o investirli? Il grafico mostra la differenza.",
+      intermedio:   "Proiezione a 20 anni su tre scenari di allocazione del risparmio mensile, con confronto al potere d'acquisto reale deflazionato al 2%.",
+      esperto:      "Simulazione Monte-Carlo semplificata su 20 anni: benchmark 0%, proxy 2% (conto deposito/BTP), portafoglio bilanciato 5%, e deflator inflazione 2%.",
+    };
+    const simSubEl = document.querySelector('#step-simulation .step-subtitle');
+    if (simSubEl) simSubEl.textContent = simSubtitles[state.level] || simSubtitles.principiante;
+
     const pmt = Math.max(0, monthlySavings());
     const years = 20;
     const labels = Array.from({ length: years + 1 }, (_, i) => i === 0 ? 'Oggi' : `Anno ${i}`);
@@ -967,12 +1008,30 @@ const app = (() => {
       }
     });
 
-    // Legenda testuale
-    document.getElementById('chartLegendDesc').innerHTML = `
-      <div class="legend-item"><div class="legend-dot" style="background:#94A3B8"></div>Risparmio puro: soldi sul conto, senza interessi</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#2563EB"></div>Conto deposito al 2% annuo: rendimento basso ma sicuro</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#16A34A"></div>Investimento moderato al 5% annuo: rendimento storico tipico dei fondi bilanciati</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#DC2626"></div>Potere d'acquisto reale: quanto valgono i risparmi dopo l'inflazione al 2%</div>`;
+    // Legenda testuale — adattata al livello
+    const legendByLevel = {
+      principiante: [
+        { color: '#94A3B8', text: 'Soldi fermi sul conto corrente — non crescono, anzi perdono valore col tempo' },
+        { color: '#2563EB', text: 'Conto deposito — la banca ti paga un piccolo interesse (circa 2% all\'anno), i soldi sono al sicuro' },
+        { color: '#16A34A', text: 'Investimento in fondi — rischio moderato, ma storicamente rende circa il 5% all\'anno — la linea verde mostra quanto potresti avere in più' },
+        { color: '#DC2626', text: 'Potere d\'acquisto reale — con l\'inflazione, €1.000 oggi varranno meno tra 10 anni: questa linea mostra l\'effetto' },
+      ],
+      intermedio: [
+        { color: '#94A3B8', text: 'Risparmio puro (0%) — baseline senza rendimenti' },
+        { color: '#2563EB', text: 'Conto deposito vincolato al 2% annuo — rendimento basso ma privo di rischio di mercato' },
+        { color: '#16A34A', text: 'Portafoglio bilanciato al 5% annuo — rendimento storico medio dei fondi azionari globali (es. MSCI World)' },
+        { color: '#DC2626', text: 'Potere d\'acquisto reale — valore deflazionato al 2% di inflazione annua' },
+      ],
+      esperto: [
+        { color: '#94A3B8', text: 'Benchmark zero-return — capitale nominale accumulato' },
+        { color: '#2563EB', text: '2% annuo — proxy conto deposito / BTP breve termine' },
+        { color: '#16A34A', text: '5% annuo — rendimento reale medio di portafoglio azionario diversificato a lungo termine' },
+        { color: '#DC2626', text: 'Valore reale — potere d\'acquisto deflazionato con inflazione attesa 2%' },
+      ],
+    };
+    const legend = legendByLevel[state.level] || legendByLevel.principiante;
+    document.getElementById('chartLegendDesc').innerHTML =
+      legend.map(l => `<div class="legend-item"><div class="legend-dot" style="background:${l.color}"></div>${l.text}</div>`).join('');
 
     renderTips();
     renderActions(savings);
@@ -1082,6 +1141,15 @@ const app = (() => {
   }
 
   function renderMortgage() {
+    // Subtitle e intro adattivi al livello
+    const mortSubtitles = {
+      principiante: "Basato su quello che hai inserito, ecco quanto mutuo potresti permetterti — e cosa significa in pratica ogni numero.",
+      intermedio:   "Analisi di affordability basata su reddito e surplus mensile, con regola del 30% e tabella di capacità per durata.",
+      esperto:      "Affordability analysis: DSC (Debt Service Coverage) sul surplus mensile, stress test sui tassi, LTV implicito per durata.",
+    };
+    const mortSubEl = document.querySelector('#step-mortgage .step-subtitle');
+    if (mortSubEl) mortSubEl.textContent = mortSubtitles[state.level] || mortSubtitles.principiante;
+
     const surplus = monthlySavings();
     const rataMax30 = state.income * 0.30;
     const rataMaxReale = Math.max(0, surplus * 0.50);
@@ -1109,7 +1177,14 @@ const app = (() => {
           return `<div class="mt-row"><span>${d} anni</span><span class="mt-amount">${fmt(imp)}</span><span class="mt-rata">${fmt(rata)}/mese</span></div>`;
         }).join('')}
       </div>
-      <p class="mt-note">${liveTag} Calcolato con tasso fisso ${MARKET_RATES.fisso}% · variabile ${MARKET_RATES.variabile}%${MARKET_RATES.inflazione ? ' · inflazione ' + MARKET_RATES.inflazione + '%' : ''}. Il TAEG effettivo varia per banca.</p>`;
+      <p class="mt-note">${liveTag} Calcolato con tasso fisso ${MARKET_RATES.fisso}% · variabile ${MARKET_RATES.variabile}%${MARKET_RATES.inflazione ? ' · inflazione ' + MARKET_RATES.inflazione + '%' : ''}. Il TAEG effettivo varia per banca.</p>
+      ${state.level === 'principiante' ? `
+      <div class="explainer-card" style="margin-top:16px;padding:14px 16px;background:var(--bg-card2);border-left:3px solid var(--accent);font-size:0.86rem;color:var(--text-muted)">
+        <strong style="color:var(--text)">📖 Come leggere questi numeri</strong><br>
+        <b>Rata mensile</b> = quello che paghi ogni mese alla banca, come un "affitto" per i soldi che ti hanno prestato.<br>
+        <b>Regola del 30%</b> = le banche di solito prestano solo se la rata non supera il 30% del tuo stipendio netto — altrimenti il rischio è troppo alto.<br>
+        <b>Durata</b> = più anni hai per restituire, meno paghi ogni mese, ma in totale paghi più interessi.
+      </div>` : ''}`;
 
     updateMortgageSim();
   }
