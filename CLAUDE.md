@@ -16,12 +16,21 @@ Contiene la mappa completa del progetto: a cosa serve ogni file, cosa esporta, e
 
 ---
 
-## Comandi utili
+## Avvio
 
 ```bash
-npm start        # avvia frontend (porta 8080) + server Node (porta 3000) in parallelo
-npm test         # esegue la test suite
+# Prima volta: installa dipendenze server
+cd app/server && npm install && cd ../..
+
+# Avvia tutto (frontend + API sulla stessa porta 3000)
+npm start
+
+# Test
+npm test
 ```
+
+Il server Express serve anche i file statici del frontend — **una sola porta (3000), un solo comando**.
+Non serve API key: usa `claude --print` CLI già autenticato.
 
 ---
 
