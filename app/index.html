@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinanzaFacile — Il tuo assistente finanziario</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <div class="progress-bar-container" id="progressBar" style="display:none">
+    <div class="progress-bar-fill" id="progressBarFill"></div>
+  </div>
+
+  <div class="app-container">
+
+    <!-- ══ STEP 0: Landing ══ -->
+    <div class="step active" id="step-landing">
+      <div class="hero">
+        <div class="hero-icon">💰</div>
+        <h1>Finanza<span>Facile</span></h1>
+        <p class="hero-subtitle">Il tuo assistente finanziario personale</p>
+        <p class="hero-desc">
+          In 5 minuti scopri la tua situazione finanziaria, simula il tuo futuro
+          e ricevi consigli pratici — senza gergo complicato.
+        </p>
+        <div class="feature-pills">
+          <span class="pill">📊 Test personalizzato</span>
+          <span class="pill">💸 Analisi spese</span>
+          <span class="pill">🔮 Simulazione futuro</span>
+          <span class="pill">💡 Consigli pratici</span>
+        </div>
+        <button class="btn btn-primary btn-large" onclick="app.startQuiz()">Inizia ora →</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 1: Quiz ══ -->
+    <div class="step" id="step-quiz">
+      <div class="step-header">
+        <div class="step-badge" id="quizBadge">Domanda 1 di 6</div>
+        <h2 id="questionTitle"></h2>
+      </div>
+      <div class="question-container">
+        <p class="question-text" id="questionText"></p>
+        <div class="options-list" id="optionsList"></div>
+      </div>
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="app.prevQuestion()" id="btnPrevQ" style="visibility:hidden">← Indietro</button>
+        <button class="btn btn-primary" onclick="app.nextQuestion()" id="btnNextQ" disabled>Avanti →</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 2: Profilo ══ -->
+    <div class="step" id="step-profile">
+      <div class="profile-result">
+        <div class="profile-icon" id="profileIcon"></div>
+        <h2 id="profileTitle"></h2>
+        <p id="profileDesc"></p>
+        <div class="score-bars">
+          <div class="score-bar-item">
+            <span class="sb-label">Conoscenza finanziaria</span>
+            <div class="score-bar"><div class="score-bar-fill" id="knowledgeBar"></div></div>
+            <span class="sb-val" id="knowledgeLabel"></span>
+          </div>
+          <div class="score-bar-item">
+            <span class="sb-label">Gestione del denaro</span>
+            <div class="score-bar"><div class="score-bar-fill green" id="lifestyleBar"></div></div>
+            <span class="sb-val" id="lifestyleLabel"></span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-large" onclick="app.goToExpenses()">Analizza le mie spese →</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 3: Spese ══ -->
+    <div class="step" id="step-expenses">
+      <div class="step-header">
+        <h2>Le tue spese mensili</h2>
+        <p class="step-subtitle">Inserisci una stima delle tue spese medie. Non deve essere perfetta — una cifra approssimativa va benissimo.</p>
+      </div>
+
+      <div class="income-card">
+        <div class="income-row">
+          <div class="income-info">
+            <span class="income-icon">💼</span>
+            <span class="income-label-text">Stipendio / Entrate mensili nette</span>
+          </div>
+          <div class="input-group">
+            <span class="input-prefix">€</span>
+            <input type="number" id="incomeInput" placeholder="1800" min="0" oninput="app.updateSavings()">
+          </div>
+        </div>
+      </div>
+
+      <div class="expense-grid" id="expenseGrid"></div>
+
+      <div class="savings-preview" id="savingsPreview" style="display:none">
+        <div class="savings-row">
+          <span>Entrate mensili</span>
+          <span class="savings-amount positive" id="previewIncome">+€ 0</span>
+        </div>
+        <div class="savings-row">
+          <span>Uscite totali</span>
+          <span class="savings-amount negative" id="previewExpenses">-€ 0</span>
+        </div>
+        <div class="savings-row savings-total">
+          <span>Risparmio mensile</span>
+          <span class="savings-amount" id="previewSavings">€ 0</span>
+        </div>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn btn-ghost" onclick="app.showStep('profile')">← Indietro</button>
+        <button class="btn btn-primary" onclick="app.goToSimulation()">Simula il mio futuro →</button>
+      </div>
+    </div>
+
+    <!-- ══ STEP 4: Simulazione + Tips ══ -->
+    <div class="step" id="step-simulation">
+      <div class="step-header">
+        <h2>Il tuo futuro finanziario</h2>
+        <p class="step-subtitle">Ecco come i tuoi risparmi evolvono nei prossimi 20 anni in 3 scenari diversi</p>
+      </div>
+
+      <div class="metrics-grid" id="metricsGrid"></div>
+
+      <div class="chart-container">
+        <canvas id="simulationChart"></canvas>
+      </div>
+
+      <div class="chart-legend-desc" id="chartLegendDesc"></div>
+
+      <!-- AI Enhancement banner -->
+      <div class="ai-banner" id="aiBanner">
+        <div class="ai-banner-left">
+          <span class="ai-icon">🤖</span>
+          <div>
+            <strong>Analisi AI personalizzata</strong>
+            <span>Inserisci una Claude API key per ricevere un'analisi contestuale generata dall'intelligenza artificiale</span>
+          </div>
+        </div>
+        <div class="ai-banner-right">
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." class="api-key-input">
+          <button class="btn btn-ai" onclick="app.requestAIAnalysis()">Analizza con AI</button>
+        </div>
+      </div>
+
+      <!-- AI result (shown when API call succeeds) -->
+      <div class="ai-result" id="aiResult" style="display:none">
+        <div class="ai-result-header">
+          <span>🤖</span> <strong>Analisi AI — Claude</strong>
+        </div>
+        <div class="ai-result-body" id="aiResultBody"></div>
+      </div>
+
+      <div class="tips-section">
+        <h3>💡 I concetti che ti aiutano a capire</h3>
+        <p class="tips-intro" id="tipsIntro"></p>
+        <div class="tips-grid" id="tipsGrid"></div>
+      </div>
+
+      <div class="action-section">
+        <h3>🎯 Prossimi passi consigliati</h3>
+        <div class="action-list" id="actionList"></div>
+      </div>
+
+      <div class="step-nav" style="justify-content:center; gap:16px; margin-top:32px">
+        <button class="btn btn-ghost" onclick="app.showStep('expenses')">← Torna alle spese</button>
+        <button class="btn btn-primary" onclick="app.restart()">Ricomincia 🔄</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
